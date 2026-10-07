@@ -1,0 +1,745 @@
+{
+  "name": "Sanureva — CRM API Gateway",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sanureva-crm-api",
+        "responseMode": "responseNode",
+        "options": {
+          "onlyRunIf": "={{ $json.headers[\"x-crm-key\"] === \"8kN6tp0nrHLqJUPaIX-huwaQUYX3cuXkj5UrtrezHG8\" }}"
+        },
+        "authentication": "none"
+      },
+      "id": "crm-api-webhook",
+      "name": "CRM API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "renameOutput": true,
+              "outputKey": "snapshot",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "snapshot",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "send_message",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "send_message",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Unsupported"
+        }
+      },
+      "id": "route-action",
+      "name": "Route CRM Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1PKoTiaW-QAuz3D2PydyG4KQqCM_xl9qfFqXNaMXNias",
+          "cachedResultName": "Sanureva Dashboard"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "ORDERS",
+          "cachedResultName": "ORDERS"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "combineFilters": "AND",
+        "options": {
+          "returnAllMatches": "returnAllMatches"
+        }
+      },
+      "id": "read-orders",
+      "name": "CRM • Read Orders",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -740,
+        -260
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ic9Py3IjM5xPxId5",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1PKoTiaW-QAuz3D2PydyG4KQqCM_xl9qfFqXNaMXNias",
+          "cachedResultName": "Sanureva Dashboard"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CONVERSATIONS",
+          "cachedResultName": "CONVERSATIONS"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "combineFilters": "AND",
+        "options": {
+          "returnAllMatches": "returnAllMatches"
+        }
+      },
+      "id": "read-conversations",
+      "name": "CRM • Read Conversations",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -520,
+        -260
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ic9Py3IjM5xPxId5",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1PKoTiaW-QAuz3D2PydyG4KQqCM_xl9qfFqXNaMXNias",
+          "cachedResultName": "Sanureva Dashboard"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "MESSAGES",
+          "cachedResultName": "MESSAGES"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "combineFilters": "AND",
+        "options": {
+          "returnAllMatches": "returnAllMatches"
+        }
+      },
+      "id": "read-messages",
+      "name": "CRM • Read Messages",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -300,
+        -260
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ic9Py3IjM5xPxId5",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1PKoTiaW-QAuz3D2PydyG4KQqCM_xl9qfFqXNaMXNias",
+          "cachedResultName": "Sanureva Dashboard"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "CONFIRMATION_EVENTS",
+          "cachedResultName": "CONFIRMATION_EVENTS"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "combineFilters": "AND",
+        "options": {
+          "returnAllMatches": "returnAllMatches"
+        }
+      },
+      "id": "read-events",
+      "name": "CRM • Read Confirmation Events",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -80,
+        -260
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ic9Py3IjM5xPxId5",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1PKoTiaW-QAuz3D2PydyG4KQqCM_xl9qfFqXNaMXNias",
+          "cachedResultName": "Sanureva Dashboard"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "WORKFLOW_HEALTH",
+          "cachedResultName": "WORKFLOW_HEALTH"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "combineFilters": "AND",
+        "options": {
+          "returnAllMatches": "returnAllMatches"
+        }
+      },
+      "id": "read-health",
+      "name": "CRM • Read Workflow Health",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        140,
+        -260
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ic9Py3IjM5xPxId5",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1PKoTiaW-QAuz3D2PydyG4KQqCM_xl9qfFqXNaMXNias",
+          "cachedResultName": "Sanureva Dashboard"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "WHATSAPP_OUTBOX",
+          "cachedResultName": "WHATSAPP_OUTBOX"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "combineFilters": "AND",
+        "options": {
+          "returnAllMatches": "returnAllMatches"
+        }
+      },
+      "id": "read-outbox",
+      "name": "CRM • Read Outbox",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        360,
+        -260
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ic9Py3IjM5xPxId5",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const rows = (name) => $(name).all().map(i => i.json || {}).filter(r => Object.keys(r).length);\nreturn [{json:{ok:true,source:'n8n',generatedAt:new Date().toISOString(),orders:rows('CRM • Read Orders'),conversations:rows('CRM • Read Conversations'),messages:rows('CRM • Read Messages'),confirmationEvents:rows('CRM • Read Confirmation Events'),workflowHealth:rows('CRM • Read Workflow Health'),outbox:rows('CRM • Read Outbox')}}];"
+      },
+      "id": "build-snapshot",
+      "name": "CRM • Build Snapshot",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        -260
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "return-snapshot",
+      "name": "CRM • Return Snapshot",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        800,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const body=$('CRM API').first().json.body||{}; const digits=String(body.phone||'').replace(/\\D/g,''); const phone=digits.startsWith('502')?digits:(digits.length===8?'502'+digits:digits); if(!phone) throw new Error('phone is required'); const type=String(body.type||'text').toLowerCase(); if(!['text','image','pdf','video'].includes(type)) throw new Error('invalid message type'); const message=String(body.message||''); const media=String(body.media_url||''); if(type==='text'&&!message.trim()) throw new Error('message is required'); if(type!=='text'&&!media.trim()) throw new Error('media_url is required'); return [{json:{request_id:String(body.request_id||('CRM-'+Date.now()+'-'+phone.slice(-4))),action:'SEND',phone,customer:String(body.customer_name||''),order_id:String(body.order_id||''),type,message,media_url:media,file_name:String(body.file_name||''),status:'QUEUED'}}];"
+      },
+      "id": "prepare-message",
+      "name": "CRM • Prepare Manual Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -740,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1PKoTiaW-QAuz3D2PydyG4KQqCM_xl9qfFqXNaMXNias",
+          "cachedResultName": "Sanureva Dashboard"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "WHATSAPP_OUTBOX",
+          "cachedResultName": "WHATSAPP_OUTBOX"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Request ID": "={{ $json.request_id }}",
+            "Action": "={{ $json.action }}",
+            "Phone": "={{ $json.phone }}",
+            "Customer": "={{ $json.customer }}",
+            "Order ID": "={{ $json.order_id }}",
+            "Type": "={{ $json.type }}",
+            "Message / Caption": "={{ $json.message }}",
+            "Media URL": "={{ $json.media_url }}",
+            "File Name": "={{ $json.file_name }}",
+            "Status": "={{ $json.status }}",
+            "WAMID": "",
+            "Sent At": "",
+            "Error": ""
+          },
+          "schema": [
+            {
+              "id": "Request ID",
+              "displayName": "Request ID",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer",
+              "displayName": "Customer",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order ID",
+              "displayName": "Order ID",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message / Caption",
+              "displayName": "Message / Caption",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Media URL",
+              "displayName": "Media URL",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "File Name",
+              "displayName": "File Name",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WAMID",
+              "displayName": "WAMID",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sent At",
+              "displayName": "Sent At",
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "queue-outbox",
+      "name": "CRM • Queue In WhatsApp Outbox",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -500,
+        220
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ic9Py3IjM5xPxId5",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const q=$('CRM • Prepare Manual Message').first().json; return [{json:{ok:true,queued:true,requestId:q.request_id,phone:q.phone,type:q.type}}];"
+      },
+      "id": "queue-response",
+      "name": "CRM • Build Queue Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "return-queue",
+      "name": "CRM • Return Queue Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -40,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return [{json:{ok:false,error:'Unsupported CRM action'}}];"
+      },
+      "id": "unsupported",
+      "name": "CRM • Unsupported Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -740,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "return-unsupported",
+      "name": "CRM • Return Unsupported",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -500,
+        440
+      ]
+    }
+  ],
+  "connections": {
+    "CRM API": {
+      "main": [
+        [
+          {
+            "node": "Route CRM Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route CRM Action": {
+      "main": [
+        [
+          {
+            "node": "CRM • Read Orders",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM • Prepare Manual Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM • Unsupported Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Read Orders": {
+      "main": [
+        [
+          {
+            "node": "CRM • Read Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Read Conversations": {
+      "main": [
+        [
+          {
+            "node": "CRM • Read Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Read Messages": {
+      "main": [
+        [
+          {
+            "node": "CRM • Read Confirmation Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Read Confirmation Events": {
+      "main": [
+        [
+          {
+            "node": "CRM • Read Workflow Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Read Workflow Health": {
+      "main": [
+        [
+          {
+            "node": "CRM • Read Outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Read Outbox": {
+      "main": [
+        [
+          {
+            "node": "CRM • Build Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Build Snapshot": {
+      "main": [
+        [
+          {
+            "node": "CRM • Return Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Prepare Manual Message": {
+      "main": [
+        [
+          {
+            "node": "CRM • Queue In WhatsApp Outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Queue In WhatsApp Outbox": {
+      "main": [
+        [
+          {
+            "node": "CRM • Build Queue Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Build Queue Response": {
+      "main": [
+        [
+          {
+            "node": "CRM • Return Queue Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Unsupported Action": {
+      "main": [
+        [
+          {
+            "node": "CRM • Return Unsupported",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "crm-gateway-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
