@@ -16,11 +16,12 @@ Existing Sanureva n8n workflows / Google Sheet / WooCommerce / WhatsApp
 
 Import `n8n/Sanureva-CRM-API-Gateway.json` and **Activate / Publish** it. Existing workflows remain untouched.
 
-The project already contains `.env.local` configured for this n8n instance:
+Set these environment variables in Vercel project settings or a local `.env.local` (never commit secrets):
 
 ```env
 N8N_CRM_WEBHOOK_URL=https://n8n-dhhy.srv1952669.hstgr.cloud/webhook/sanureva-crm-api
-N8N_CRM_API_KEY=8kN6tp0nrHLqJUPaIX-huwaQUYX3cuXkj5UrtrezHG8
+N8N_CRM_API_KEY=SET_IN_VERCEL_AND_N8N_SECRETS_NEVER_COMMIT
+CRM_DASHBOARD_PASSWORD=SET_A_LONG_UNIQUE_PASSWORD_IN_VERCEL
 NEXT_PUBLIC_CRM_POLL_MS=12000
 ```
 
@@ -51,3 +52,5 @@ The new gateway only exposes the CRM-facing API boundary. It does not replace th
 ## Browser hydration warning
 
 `<html>` and `<body>` use `suppressHydrationWarning` because browser security extensions such as 360 Total Security can inject `bis_*` attributes before React hydrates. This does not affect CRM data or n8n connectivity.
+
+**Security:** An earlier version of this README exposed the CRM gateway credential. Rotate that credential in both the n8n gateway and Vercel; removing it from the current file does not remove it from Git history.
