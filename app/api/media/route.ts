@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       return new Response(new Uint8Array(bytes.slice(start,end+1)), { status: 206, headers });
     }
     headers.set("Content-Length", String(bytes.length));
-    return new Response(bytes, { headers });
+    return new Response(new Uint8Array(bytes), { headers });
   } catch {
     return new Response("Could not retrieve WhatsApp attachment", { status: 502 });
   }
