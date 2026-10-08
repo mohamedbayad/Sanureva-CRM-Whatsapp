@@ -195,3 +195,27 @@ tr:last-child td { border-bottom:0; }
   .formGrid { grid-template-columns:1fr; }
   .formGrid .full { grid-column:auto; }
 }
+
+
+/* Private original WhatsApp media in the chat (bot analysis never shown here). */
+.chatPicture { display:block; max-width:100%; width:min(320px,100%); max-height:400px; object-fit:contain; border-radius:11px; background:#edf3f8; cursor:zoom-in; }
+.chatAudio { display:flex; flex-direction:column; gap:9px; max-width:100%; min-width:min(240px,58vw); }
+.chatAudio span { font-size:11px; color:#506477; font-weight:650; }
+.chatAudio audio { display:block; width:min(315px,66vw); max-width:100%; height:42px; }
+.chatVideo { display:block; width:min(330px,100%); max-height:410px; border-radius:10px; background:#101820; }
+.chatDocument { color:#0b895c; font-size:12px; text-decoration:underline; }
+.bubble .mediaCaption { margin-top:8px; overflow-wrap:anywhere; }
+.bubble:has(.chatPicture), .bubble:has(.chatAudio) { min-width:180px; }
+
+/* Dedicated sign-in for private CRM customer conversations and attachments. */
+.crmLogin { min-height:calc(100vh - 80px); display:grid; place-items:center; }
+.crmLoginCard { width:min(410px,100%); padding:32px; background:#fff; border:1px solid #e3eaf0; border-radius:20px; box-shadow:var(--shadow); }
+.crmLoginMark { width:44px; height:44px; display:grid; place-items:center; font-size:22px; font-weight:900; border-radius:14px; background:#e6f7f0; color:#11865b; margin-bottom:18px; }
+.crmLoginCard h1 { margin:0; font-size:23px; }
+.crmLoginCard p { font-size:12px; line-height:1.6; color:#748093; margin:9px 0 25px; }
+.crmLoginCard form { display:grid; gap:10px; }
+.crmLoginCard label { color:#4b6074; font-weight:650; font-size:12px; }
+.crmLoginCard input { width:100%; font-size:14px; border:1px solid var(--line); border-radius:10px; padding:12px; }
+.crmLoginCard button { background:var(--accent); color:white; border:none; border-radius:10px; padding:12px; font-size:13px; font-weight:750; }
+.crmLoginCard button:disabled { opacity:.6; }
+.crmLoginError { font-size:12px; color:var(--red); }
