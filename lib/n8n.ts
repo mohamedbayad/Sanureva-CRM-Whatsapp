@@ -1,6 +1,7 @@
 import type { CrmSnapshot, OutboxPayload, SheetRecord } from "@/lib/types";
 import { REQUIRED_HEADERS, SHEET_NAMES, type SheetName } from "@/lib/contracts";
 import { cleanDisplay, normalizePhone } from "@/lib/format";
+import { createHmac } from "node:crypto";
 
 const N8N_CRM_WEBHOOK_URL = (process.env.N8N_CRM_WEBHOOK_URL || "").trim();
 const N8N_CRM_API_KEY = (process.env.N8N_CRM_API_KEY || "").trim();
@@ -120,6 +121,36 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
   } else {
     messages.push(repairedMessage);
   }
+
+  // Keep AI analysis private in n8n; the CRM receives original WhatsApp media
+  // identifiers and short-lived signed URLs instead of vision/transcript text.
+  const expiry = Math.ceil((Date.now() / 1000 + 600) / 300) * 300;
+  const mediaMarker = /\[\[WA_MEDIA:(image|audio|video|document):(\d{8,30})\]\]/;
+  for (const row of messages) {
+    const raw = cleanDisplay(row["Message Content Snippet"]);
+    const marker = mediaMarker.exec(raw);
+    const kind = cleanDisplay(row["Media Kind"]) || marker?.[1] || "";
+    const id = cleanDisplay(row["Media ID"]) || marker?.[2] || "";
+    if (!["image", "audio", "video", "document"].includes(kind) || !/^\d{8,30}$/.test(id)) continue;
+    const safeCaption = raw
+      .replace(mediaMarker, "")
+      .replace(/\n?\[CONTEXTO DEL ANUNCIO DE ORIGEN: [\s\S]*?\]/g, "")
+      .trim();
+    const defaults: Record<string,string> = {
+      image: "📷 Imagen recibida", audio: "🎤 Nota de voz",
+      video: "🎬 Video recibido", document: "📄 Documento recibido"
+    };
+    const sig = N8N_CRM_API_KEY
+      ? createHmac("sha256", N8N_CRM_API_KEY).update(kind + ":" + id + ":" + expiry).digest("hex")
+      : "";
+    row["Media Kind"] = kind;
+    row["Media ID"] = id;
+    row["Media URL"] = sig
+      ? "/api/media?id=" + encodeURIComponent(id) + "&kind=" + kind + "&exp=" + expiry + "&sig=" + sig
+      : "";
+    row["Message Content Snippet"] = safeCaption || defaults[kind];
+  }
+
   sheets[SHEET_NAMES.messages] = messages;
 
   const localWarnings: string[] = [];
