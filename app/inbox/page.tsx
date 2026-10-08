@@ -1,10 +1,11 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { Image as ImageIcon, Paperclip, Search, SendHorizontal } from "lucide-react";
+import { Paperclip, Search, SendHorizontal } from "lucide-react";
 import { useCrm } from "@/components/use-crm";
 import { PageHeader } from "@/components/PageHeader";
 import { Loading } from "@/components/Loading";
+import { MediaBubble, chatPreview } from "@/components/MediaBubble";
 import { SHEET_NAMES } from "@/lib/contracts";
 import { cleanDisplay, dateValue, formatDate, normalizePhone } from "@/lib/format";
 import type { OutboxPayload, SheetRecord } from "@/lib/types";
@@ -63,12 +64,12 @@ export default function InboxPage() {
     <section className="inboxPanel">
       <aside className="chatList">
         <div className="chatSearch"><Search size={16}/><input placeholder="Search chats…" value={q} onChange={(e)=>setQ(e.target.value)}/></div>
-        <div className="chatRows">{ranked.map(({c,id,last})=><button key={id} className={activeId===id?"chatRow selected":"chatRow"} onClick={()=>setSelected(id)}><div className="avatar">{(cleanDisplay(c["Customer Name"]) || "?").slice(0,1).toUpperCase()}</div><div className="chatMeta"><div><strong>{cleanDisplay(c["Customer Name"]) || cleanDisplay(c["Customer Phone"])}</strong><time>{formatDate(last?.Timestamp || c["Started At"])}</time></div><span>{cleanDisplay(last?.["Message Content Snippet"]) || cleanDisplay(c["Intent / Topic"]) || "No messages"}</span></div></button>)}</div>
+        <div className="chatRows">{ranked.map(({c,id,last})=><button key={id} className={activeId===id?"chatRow selected":"chatRow"} onClick={()=>setSelected(id)}><div className="avatar">{(cleanDisplay(c["Customer Name"]) || "?").slice(0,1).toUpperCase()}</div><div className="chatMeta"><div><strong>{cleanDisplay(c["Customer Name"]) || cleanDisplay(c["Customer Phone"])}</strong><time>{formatDate(last?.Timestamp || c["Started At"])}</time></div><span>{chatPreview(last) || cleanDisplay(c["Intent / Topic"]) || "No messages"}</span></div></button>)}</div>
       </aside>
       <div className="conversation">
         {active ? <>
           <div className="conversationHead"><div><strong>{cleanDisplay(active["Customer Name"]) || "Customer"}</strong><span>{phone} {orderId ? `· Order #${orderId}` : ""}</span></div><span className="pill subtle">{cleanDisplay(active["Intent / Topic"]) || "WhatsApp"}</span></div>
-          <div className="messages">{thread.length ? thread.map((m,i)=>{ const inbound=cleanDisplay(m.Direction).toLowerCase().includes("inbound"); return <div key={`${cleanDisplay(m["Message ID"])}-${i}`} className={inbound?"bubbleRow inbound":"bubbleRow outbound"}><div className="bubble"><p>{cleanDisplay(m["Message Content Snippet"]) || "[No text]"}</p><small>{cleanDisplay(m["Message Type"])} · {cleanDisplay(m["Delivery Status"])} · {formatDate(m.Timestamp)}</small></div></div> }) : <div className="emptyState">No logged messages for this conversation.</div>}</div>
+          <div className="messages">{thread.length ? thread.map((m,i)=>{ const inbound=cleanDisplay(m.Direction).toLowerCase().includes("inbound"); return <div key={`${cleanDisplay(m["Message ID"])}-${i}`} className={inbound?"bubbleRow inbound":"bubbleRow outbound"}><div className="bubble"><MediaBubble message={m} /><small>{cleanDisplay(m["Message Type"])} · {cleanDisplay(m["Delivery Status"])} · {formatDate(m.Timestamp)}</small></div></div> }) : <div className="emptyState">No logged messages for this conversation.</div>}</div>
           <form className="composer" onSubmit={send}>
             <div className="composeTop"><select value={type} onChange={(e)=>setType(e.target.value as OutboxPayload["type"])}><option>Text</option><option>Image</option><option>PDF</option><option>Video</option></select>{type!=="Text" && <><div className="fieldInline"><Paperclip size={15}/><input value={mediaUrl} onChange={(e)=>setMediaUrl(e.target.value)} placeholder="Public media URL"/></div>{type==="PDF" && <input className="fileName" value={fileName} onChange={(e)=>setFileName(e.target.value)} placeholder="file.pdf"/>}</>}</div>
             <div className="composeMain"><textarea value={text} onChange={(e)=>setText(e.target.value)} placeholder={type==="Text"?"Type a manual WhatsApp reply…":"Caption / message (optional)"}/><button disabled={sending || !data} title="Send through n8n"><SendHorizontal size={18}/>{sending?"Queueing…":"Queue"}</button></div>
