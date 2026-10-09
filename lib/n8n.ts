@@ -84,16 +84,64 @@ function toSheetMap(raw: Record<string, unknown>): Record<SheetName, SheetRecord
 }
 
 export async function getSnapshot(): Promise<CrmSnapshot> {
+  const sourceMode = process.env.CRM_READ_SOURCE || "n8n";
+  const readCurrent = () => callN8n<Record<string, unknown>>({ action: "snapshot" });
   const raw = await (async (): Promise<Record<string, unknown>> => {
-    if (process.env.CRM_READ_SOURCE !== "neon") {
-      return callN8n<Record<string, unknown>>({ action: "snapshot" });
-    }
+    if (sourceMode !== "neon" && sourceMode !== "neon_shadow") return readCurrent();
+
+    // Keep the Sheets-backed n8n snapshot authoritative during the migration.
+    const current = await readCurrent();
     try {
       const { getNeonRawSnapshot } = await import("@/lib/neon-snapshot");
-      return await getNeonRawSnapshot();
+      const mirror = await getNeonRawSnapshot();
+      const sheetTypes = [
+        ["orders", "Order ID"],
+        ["conversations", "Conversation ID"],
+        ["messages", "Message ID"],
+        ["confirmationEvents", "Event ID"],
+        ["outbox", "Request ID"],
+      ] as const;
+
+      let parity = true;
+      for (const [name, idKey] of sheetTypes) {
+        const original = Array.isArray(current[name]) ? current[name] as SheetRecord[] : [];
+        const copied = Array.isArray(mirror[name]) ? mirror[name] as SheetRecord[] : [];
+        if (copied.length < original.length) { parity = false; break; }
+        // Compare only stable IDs here; the n8n gateway also transforms media captions.
+        const known = new Set(copied.map((r) => String(r[idKey] || "")).filter(Boolean));
+        if (original.some((r) => r[idKey] && !known.has(String(r[idKey])))) {
+          parity = false;
+          break;
+        }
+      }
+
+      // Don't display stale WooCommerce or inbox status while sync is every 15 minutes.
+      for (const [name, idKey, stateKeys] of [
+        ["orders", "Order ID", ["WooCommerce Status", "WhatsApp Status", "Delivery Status"]],
+        ["conversations", "Conversation ID", ["Status", "Handled By"]],
+      ] as const) {
+        const original = Array.isArray(current[name]) ? current[name] as SheetRecord[] : [];
+        const copied = Array.isArray(mirror[name]) ? mirror[name] as SheetRecord[] : [];
+        const mapped = new Map(copied.map((r) => [String(r[idKey] || ""), r]));
+        for (const record of original) {
+          const counterpart = mapped.get(String(record[idKey] || ""));
+          if (!counterpart || stateKeys.some((key) => String(record[key] || "") !== String(counterpart[key] || ""))) {
+            parity = false;
+            break;
+          }
+        }
+      }
+
+      console.info("Neon shadow consistency:", {
+        parity,
+        liveMessages: Array.isArray(current.messages) ? current.messages.length : null,
+        neonMessages: Array.isArray(mirror.messages) ? mirror.messages.length : null,
+      });
+      if (sourceMode === "neon_shadow" || !parity) return current;
+      return mirror;
     } catch (error) {
-      console.error("Neon snapshot unavailable; using n8n fallback:", error instanceof Error ? error.message : "unknown error");
-      return callN8n<Record<string, unknown>>({ action: "snapshot" });
+      console.error("Neon mirror unavailable; preserving n8n:", error instanceof Error ? error.message : "unknown error");
+      return current;
     }
   })();
   if (raw.ok === false) {
