@@ -1,5 +1,8 @@
 name: Neon Snapshot PR Validation
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - feature/neon-snapshot-fallback-20261009
