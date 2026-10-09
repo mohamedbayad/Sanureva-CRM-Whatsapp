@@ -5,7 +5,7 @@ export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   // Preview health returns aggregate counts only, and is additionally protected by Vercel Authentication.
   // Never grant this exception to production deployments.
-  if (pathname === "/api/neon-health" && process.env.CRM_READ_SOURCE === "neon_shadow") {
+  if (pathname === "/api/neon-health" && process.env.VERCEL_ENV === "preview" && process.env.CRM_READ_SOURCE === "neon_shadow") {
     return NextResponse.next();
   }
   const isAuth = pathname === "/login" || pathname === "/api/auth/login";
