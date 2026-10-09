@@ -84,7 +84,18 @@ function toSheetMap(raw: Record<string, unknown>): Record<SheetName, SheetRecord
 }
 
 export async function getSnapshot(): Promise<CrmSnapshot> {
-  const raw = await callN8n<Record<string, unknown>>({ action: "snapshot" });
+  const raw = await (async (): Promise<Record<string, unknown>> => {
+    if (process.env.CRM_READ_SOURCE !== "neon") {
+      return callN8n<Record<string, unknown>>({ action: "snapshot" });
+    }
+    try {
+      const { getNeonRawSnapshot } = await import("@/lib/neon-snapshot");
+      return await getNeonRawSnapshot();
+    } catch (error) {
+      console.error("Neon snapshot unavailable; using n8n fallback:", error instanceof Error ? error.message : "unknown error");
+      return callN8n<Record<string, unknown>>({ action: "snapshot" });
+    }
+  })();
   if (raw.ok === false) {
     throw new Error(String(raw.error || "n8n CRM Gateway returned an error."));
   }
