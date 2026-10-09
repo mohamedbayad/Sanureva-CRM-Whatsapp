@@ -2,8 +2,9 @@ import { neon } from "@neondatabase/serverless";
 import type { SheetRecord } from "@/lib/types";
 
 // Read-only mirror. Never change the CRM's write path or orders from this module.
-const toRecords = (rows: Array<{ source_record: unknown }>): SheetRecord[] =>
-  rows.map(({ source_record }) => {
+const toRecords = (rows: Array<Record<string, unknown>>): SheetRecord[] =>
+  rows.map((row) => {
+    const source_record = row.source_record;
     if (!source_record || typeof source_record !== "object" || Array.isArray(source_record)) {
       throw new Error("Neon snapshot contains invalid source_record data");
     }
