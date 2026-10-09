@@ -3,6 +3,11 @@ import { authIsConfigured, CRM_SESSION_COOKIE, verifyCrmSession } from "./lib/au
 
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  // Preview health returns aggregate counts only, and is additionally protected by Vercel Authentication.
+  // Never grant this exception to production deployments.
+  if (pathname === "/api/neon-health" && process.env.CRM_READ_SOURCE === "neon_shadow") {
+    return NextResponse.next();
+  }
   const isAuth = pathname === "/login" || pathname === "/api/auth/login";
   const isReady = authIsConfigured();
   const signedIn = verifyCrmSession(request.cookies.get(CRM_SESSION_COOKIE)?.value);
