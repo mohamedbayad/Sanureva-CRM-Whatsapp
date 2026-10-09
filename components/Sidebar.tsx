@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Inbox, LayoutDashboard, ListChecks, MessageSquareText, Send, ShoppingBag } from "lucide-react";
+import { Activity, BarChart3, Inbox, LayoutDashboard, ListChecks, MessageSquareText, Send, ShoppingBag } from "lucide-react";
 
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inbox", label: "WhatsApp Inbox", icon: Inbox },
   { href: "/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/campaigns", label: "Campaign Analytics", icon: BarChart3 },
   { href: "/outbox", label: "Outbox", icon: Send },
   { href: "/events", label: "Events & Health", icon: Activity },
 ];
