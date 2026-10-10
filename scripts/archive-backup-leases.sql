@@ -95,6 +95,11 @@ BEGIN
  -- New snapshot: unique (conversation,last_activity) already enforced.
  -- Two concurrent claimers cannot reserve the same conversation.
  SELECT v.* INTO candidate FROM public.archive_candidates_preview v
+ WHERE NOT EXISTS (
+   SELECT 1 FROM public.conversation_archives existing
+   WHERE existing.conversation_id=v.conversation_id
+     AND existing.last_activity_at=v.last_activity_at
+ )
  ORDER BY v.last_activity_at,v.conversation_id LIMIT 1;
  IF NOT FOUND THEN RETURN; END IF;
  new_archive:=gen_random_uuid();
