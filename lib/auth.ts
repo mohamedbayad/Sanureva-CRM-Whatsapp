@@ -41,7 +41,10 @@ export function checkCrmPassword(input: string): boolean {
   const { password } = credentials();
   if (!password || !authIsConfigured()) return false;
   const left = createHmac("sha256", password).update("compare").digest();
-  const right = createHmac("sha256", input).update("compare").digest();
+  const candidate = process.env.VERCEL_ENV === "preview" && process.env.CRM_READ_SOURCE === "neon_shadow"
+    ? input.trim()
+    : input;
+  const right = createHmac("sha256", candidate).update("compare").digest();
   return timingSafeEqual(left, right);
 }
 
