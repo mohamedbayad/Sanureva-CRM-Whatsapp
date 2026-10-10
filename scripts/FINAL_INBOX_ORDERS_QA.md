@@ -29,3 +29,20 @@ The latest browser `/media-review` report (provided by the user) confirms 1 orig
 - [ ] Confirm auth-negative access returns 401/403 rather than exposing orders or conversation details.
 
 Do not merge PR #2, change Main database schema, turn off archive dry-run, or activate backup-only scheduling without explicit release authorization. Customer messages/media/orders must never be purged through this release.
+
+## Protected in-browser acceptance tool
+
+The feature branch includes an **authenticated Preview-only** `/acceptance-review` page, linked as **Inbox & Orders QA** in the Preview sidebar. The page pulls `GET /api/neon-page-qa` and `GET /api/snapshot`, compares source/contract, distinct order IDs, conversation links, status-callback exclusion, finite Dashboard KPIs and consistent aggregate counts, and emits a PII-free JSON report. HTTP `409` data-quality check responses now show individual failed checks, rather than hiding the reason.
+
+Human checks are deliberately separate and include Inbox rendering and no Send/Queue composer, Orders status and no edit controls, Dashboard metrics, **mobile Inbox layout**, and read-only/authenticated access. The operator must visit those real pages and mark them confirmed. These checkboxes do not modify CRM data, send WhatsApp messages, or authorize deployment.
+
+Synthetic CI tests `scripts/inbox-orders-acceptance.test.mjs` and `scripts/inbox-orders-browser-acceptance.test.mjs` verify the actual components, Preview outbox POST denial (403 before sending), route protection and PII-free report. They are **not** an authenticated browser visit and cannot replace the user's acceptance JSON.
+
+### Acceptance workflow
+
+1. Sign in to latest protected Preview and open `/acceptance-review`.
+2. Click **Run Inbox & Orders QA**. Review whether automatic aggregate checks pass; if not, share the safe report without customer identifiers.
+3. Open each linked page (Inbox, Orders, Dashboard) including mobile layout, confirm correct UI and no send/edit controls; test unsigned-in access separately.
+4. Complete checkboxes only for verified behaviors and click **Copy safe QA report**.
+5. Do not merge PR #2, switch Main archive dry-run or activate backup until all release gates pass and the owner explicitly approves that action.
+
