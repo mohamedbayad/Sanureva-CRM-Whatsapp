@@ -69,7 +69,7 @@ const manualLabels = [
   { key: "inbox", title: "Inbox", href: "/inbox",
     text: "Real conversations display correctly, image/audio stay as original media, and there is no Queue/Send composer." },
   { key: "orders", title: "Orders", href: "/orders",
-    text: "12+/- live orders show correctly with WooCommerce/WhatsApp statuses and no edit actions." },
+    text: "Order records show correct WooCommerce/WhatsApp statuses and no edit actions." },
   { key: "dashboard", title: "Dashboard", href: "/",
     text: "Order/conversation/message counts and KPI cards load without errors." },
 ] as const;
