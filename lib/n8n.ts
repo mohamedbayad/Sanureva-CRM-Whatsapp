@@ -86,7 +86,16 @@ function toSheetMap(raw: Record<string, unknown>): Record<SheetName, SheetRecord
 export async function getSnapshot(): Promise<CrmSnapshot> {
   const sourceMode = process.env.CRM_READ_SOURCE || "n8n";
   const readCurrent = () => callN8n<Record<string, unknown>>({ action: "snapshot" });
-  const raw = await (async (): Promise<Record<string, unknown>> => {
+  // Explicit, opt-in, preview-only direct Neon reader. No n8n send-capable credentials
+  // are available to the preview; on Neon failure fail closed rather than fabricate a fallback.
+  const previewDirect = process.env.VERCEL_ENV === "preview" &&
+    sourceMode === "neon_shadow" && process.env.CRM_PREVIEW_DIRECT_READ === "1";
+  const raw = previewDirect
+    ? await (async (): Promise<Record<string, unknown>> => {
+        const { getNeonRawSnapshot } = await import("@/lib/neon-snapshot");
+        return getNeonRawSnapshot();
+      })()
+    : await (async (): Promise<Record<string, unknown>> => {
     if (sourceMode !== "neon" && sourceMode !== "neon_shadow") return readCurrent();
 
     // Keep the Sheets-backed n8n snapshot authoritative during the migration.
@@ -226,7 +235,7 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
   const remoteOk = raw.contractOk === undefined ? true : Boolean(raw.contractOk);
 
   return {
-    source: "n8n",
+    source: previewDirect ? "neon" : "n8n",
     syncedAt: String(raw.generatedAt || raw.syncedAt || new Date().toISOString()),
     contractOk: remoteOk && contractWarnings.length === 0,
     contractWarnings,
