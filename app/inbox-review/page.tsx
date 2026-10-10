@@ -88,7 +88,7 @@ export default function InboxReviewPage() {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className={tab === "unassigned" ? "pill" : "pill subtle"}
                 onClick={() => setTab("unassigned")}>
-                <ClipboardList size={15}/> Unassigned ({data.unassigned.length})
+                <ClipboardList size={15}/> Unlinked status records ({data.unassigned.length})
               </button>
               <button className={tab === "recovered" ? "pill" : "pill subtle"}
                 onClick={() => setTab("recovered")}>
@@ -103,23 +103,23 @@ export default function InboxReviewPage() {
           {tab === "unassigned" ? (
             <>
               <p style={{ margin: "12px 0 18px" }}>
-                These historical records have no reliable conversation ID, customer phone, or original message content in the source.
+                These records contain WhatsApp delivery statuses but no original message body or customer details.
                 They are preserved and must not be linked by guesswork.
               </p>
               <div className="tableWrap">
                 <table className="wide">
-                  <thead><tr><th>Time</th><th>Type</th><th>Original message</th><th>Reference</th><th>Review status</th></tr></thead>
+                  <thead><tr><th>Time</th><th>Type</th><th>Original message</th><th>Reference</th><th>Delivery status</th></tr></thead>
                   <tbody>
                     {filteredUnassigned.map((m) => <tr key={m.id}>
                       <td>{formatDate(m.timestamp)}</td>
                       <td>{cleanDisplay(m.kind) === "text" && cleanDisplay(m.direction) === "system" && !cleanDisplay(m.preview_text) ? "Unknown type" : cleanDisplay(m.kind)} <small>{cleanDisplay(m.direction) === "system" && !cleanDisplay(m.preview_text) ? "Missing source details" : cleanDisplay(m.direction)}</small></td>
                       <td style={{ minWidth: 250, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-                        {cleanDisplay(m.preview_text).slice(0, 500) || "Original content missing in Google Sheets"}
+                        {cleanDisplay(m.preview_text).slice(0, 500) || "Status record only — no original message body"}
                       </td>
                       <td className="mono" title={m.whatsapp_wamid || m.id}>
                         {cleanDisplay(m.whatsapp_wamid || m.id).slice(0, 28)}…
                       </td>
-                      <td><span className="pill subtle">Needs verified identity</span></td>
+                      <td><span className="pill subtle">{cleanDisplay(m.delivery_status) || "Unlinked status"}</span></td>
                     </tr>)}
                   </tbody>
                 </table>
