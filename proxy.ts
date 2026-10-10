@@ -12,7 +12,10 @@ export function proxy(request: NextRequest) {
   const isReady = authIsConfigured();
   const signedIn = verifyCrmSession(request.cookies.get(CRM_SESSION_COOKIE)?.value);
   if (isAuth) {
-    if (pathname === "/login" && signedIn) return NextResponse.redirect(new URL("/", request.url));
+    if (pathname === "/login" && signedIn) {
+      const landing = process.env.VERCEL_ENV === "preview" && process.env.CRM_READ_SOURCE === "neon_shadow" ? "/inbox-review" : "/";
+      return NextResponse.redirect(new URL(landing, request.url));
+    }
     return NextResponse.next();
   }
   if (!isReady || !signedIn) {
