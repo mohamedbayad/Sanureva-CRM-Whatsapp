@@ -63,12 +63,12 @@ export async function GET() {
           conversations: conversations.length, messages: messages.length,
           linked_messages: linkedMessages, unlinked_messages: unlinkedMessages,
           legacy_messages_without_id: missingMessageIds,
-          original_media_retrieval_tested: false },
+          original_media_retrieval_tested: false, status_records_excluded_from_inbox: true },
         orders: { data_ready: validOrders, rows: orderRows.length,
           unique_order_ids: uniqueOrders.size, latest_order_list_renderable: latestOrders.length },
         contract: { valid: contractWarnings.length === 0, warning_count: contractWarnings.length },
       },
-      note: "Data-model and dashboard-metrics smoke test only. Does not test actual browser pages or WhatsApp media access.",
+      note: "Status-only delivery callbacks are excluded from Neon Inbox totals but remain stored. No browser/media test.",
     }, { headers });
   } catch {
     return NextResponse.json({ ok: false, error: "neon_preview_qa_unavailable" },
