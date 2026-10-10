@@ -26,6 +26,18 @@ Use the latest Vercel Preview from the feature branch and a legitimately authent
 - [ ] Inspect Inbox both desktop and narrow/mobile layouts; test recent and older messages, image/no-image and audio/no-audio fallbacks.
 - [ ] Record human/browser approval **without screenshots containing customer names, numbers or media**.
 
+### Preview-only Media Playback QA route
+
+An authenticated, Preview-only `/media-review` page now appears in the sidebar as **Media Playback QA**. It is server-gated to `VERCEL_ENV=preview`, `CRM_READ_SOURCE=neon_shadow`, and `CRM_PREVIEW_DIRECT_READ=1`. It reads the same protected CRM snapshot as Inbox, but never sends messages or changes orders. It intentionally omits names, phone numbers, media IDs and signed URLs from the copyable report.
+
+1. Open the protected Preview, pass Vercel Authentication and CRM login, then select **Media Playback QA** (or open `/media-review`).
+2. Click **Start / refresh checks**. Review HTTP 206, audio/image MIME, cache-control, and the original picture's actual render status.
+3. Press Play on the original voice note, listen, and click **Confirm you heard the audio** only if the sound is genuinely audible. If not, use **Test next voice note** and record which status failed.
+4. Click **Copy safe QA results** and share only that report. Do **not** share screenshots of customers' media, signed links, CRM cookies or passwords.
+5. Mark Gate A complete only when the actual browser confirms both picture display and audible sound, with secure HTTP tests passing.
+
+The dedicated page was created because the connected Vercel credential cannot access the protected team `mohamedbayads-projects` (HTTP 403), even though public metadata/deployments are sometimes readable. The Vercel connection must be authorized to that team before browser automation can be trusted. Do not relax deployment authentication to work around this.
+
 ## Gate B: Backup-only data & security review — NOT AUTHORIZED FOR MAIN
 
 - [ ] Review and approve `scripts/archive-backup-leases.sql`, `scripts/archive-backup-leased-finalize.sql` and `scripts/archive-backup-finalize-function.sql` for Main, including object key uniqueness, lease fencing, transactional ledger and database privileges. Do not copy QA-specific function fixtures to Main.
