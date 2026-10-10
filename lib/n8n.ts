@@ -210,8 +210,17 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
       image: "📷 Imagen recibida", audio: "🎤 Nota de voz",
       video: "🎬 Video recibido", document: "📄 Documento recibido"
     };
-    const sig = N8N_CRM_API_KEY
-      ? createHmac("sha256", N8N_CRM_API_KEY).update(kind + ":" + id + ":" + expiry).digest("hex")
+    // Preview must never receive the original n8n CRM API key: it also permits
+    // send_message. Only sign media links when an independent read-only gateway
+    // has been configured; otherwise media remains safely unavailable.
+    const previewMedia = process.env.VERCEL_ENV === "preview" &&
+      sourceMode === "neon_shadow" && process.env.CRM_PREVIEW_DIRECT_READ === "1";
+    const signingKey = previewMedia
+      ? (process.env.N8N_MEDIA_READ_WEBHOOK_URL && process.env.N8N_MEDIA_READ_KEY
+          ? (process.env.CRM_PREVIEW_SESSION_SECRET || "").trim() : "")
+      : N8N_CRM_API_KEY;
+    const sig = signingKey
+      ? createHmac("sha256", signingKey).update(kind + ":" + id + ":" + expiry).digest("hex")
       : "";
     row["Media Kind"] = kind;
     row["Media ID"] = id;
