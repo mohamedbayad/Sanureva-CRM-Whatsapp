@@ -12,7 +12,7 @@ WITH policy AS (
  count(*) FILTER (WHERE status='pending' AND lease_expires_at>now())::int active_leases
  FROM public.conversation_archives
 ), verified AS (
- SELECT count(*)::int verified_count,
+ SELECT count(*) FILTER (WHERE status='verified')::int verified_count,
  count(*) FILTER (WHERE status='verified' AND
  (sha256 IS NULL OR compressed_bytes IS NULL OR verified_at IS NULL))::int incomplete_verified_metadata
  FROM public.conversation_archives
