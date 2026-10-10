@@ -60,3 +60,16 @@ A PII-free JSON report was supplied from the authenticated `/acceptance-review` 
 The 431 displayed messages are the filtered chat messages. There were 447 raw Main Neon records at the preceding audit, including 16 legacy delivery/status-only callback records correctly omitted from Inbox. The submitted report proves the **aggregate validation** passed in the signed-in Preview, not that the real UI layout or negative authentication flow were manually checked. The prior separate Media Playback QA confirmed one real image and one audible voice note.
 
 **Next step:** use the same Preview's `/acceptance-review` links to manually verify Inbox, Orders, Dashboard, mobile layout and read-only/unsigned-in access, check only items genuinely inspected, and share the new PII-free report. Do not merge, activate automatic backup, or authorize deletion based solely on automatic PASS.
+
+
+## FINAL user-confirmed CRM Preview acceptance — 2026-10-10
+
+The user submitted a second PII-free JSON report from the authenticated `/acceptance-review` page. **Overall CRM Preview acceptance: PASS.**
+
+- `automated_pass=true`, `overall_acceptance=true`.
+- Source Neon, snapshot contract, unique orders, linked messages, filtered callbacks, Dashboard KPIs, read-only page QA and aggregate parity: all true.
+- **46 conversations, 431 displayed chat messages, 12 Orders, 0 unlinked, 0 duplicate order IDs and 0 delivery-status-only callbacks rendered**.
+- All **5/5 manual checks confirmed by the user**: `manual_inbox_confirmed`, `manual_orders_confirmed`, `manual_dashboard_confirmed`, `manual_mobile_confirmed`, and `manual_read_only_security_confirmed` are true.
+- Prior separate authenticated `/media-review` evidence: original image rendered; original audio decoded, started and audibly confirmed.
+
+**Gate A: PASS (user-verified).** This is acceptance of the feature Preview, **not** a separate instruction/authorization to merge PR #2, deploy Main/Production, run Main archive migrations, or activate backups. Maintain the independent Gate B and release-approval hold. Message/media deletion remains prohibited in this phase.
