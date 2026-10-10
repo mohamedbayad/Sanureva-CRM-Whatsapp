@@ -60,3 +60,13 @@ test('leased finalizer validates active token, expiry and source blockers', () =
   assert.match(sql, /UPDATE public\.conversation_archives SET/);
   assert.doesNotMatch(sql, /DELETE\s+FROM\s+public\.(?:messages|orders|media_objects)/i);
 });
+
+test('QA database role remains non-login and cannot delete customer data', () => {
+  const sql = readFileSync(new URL('./archive-qa-role.sql', import.meta.url), 'utf8');
+  assert.match(sql, /NOLOGIN NOINHERIT NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS/);
+  assert.match(sql, /Refusing QA role setup: isolated synthetic fixture missing/);
+  assert.match(sql, /GRANT INSERT, UPDATE ON public\.conversation_archives/);
+  assert.match(sql, /GRANT INSERT ON public\.archived_message_keys/);
+  assert.doesNotMatch(sql, /GRANT\s+(?:ALL|DELETE|TRUNCATE)\s+ON\s+(?:TABLE\s+)?public\./i);
+  assert.doesNotMatch(sql, /GRANT\s+UPDATE\s+ON\s+public\.(?:messages|media_objects|orders)/i);
+});
