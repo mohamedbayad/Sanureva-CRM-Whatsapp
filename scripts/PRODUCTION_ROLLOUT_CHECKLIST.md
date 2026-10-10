@@ -13,7 +13,7 @@ Updated: 2026-10-10. This checklist is for release review, not permission to dep
 - **Main Neon:** archive policy `dry_run=true`, `preserve_orders=true`, `allow_message_delete=false`, `allow_media_delete=false`; no real archives or archived keys at last audit. Counts of active orders and messages may change during ongoing sync.
 - SQL finalizer / lease migrations are QA-only; **not installed on Main**. Existing candidate media-count VIEW was corrected on Main; rollback is available.
 
-## Gate A: Real CRM Preview browser acceptance — UNVERIFIED
+## Gate A: CRM Preview — MEDIA PLAYBACK VERIFIED; OTHER CHECKS PENDING
 
 Use the latest Vercel Preview from the feature branch and a legitimately authenticated browser session. Never copy CRM cookies, passwords or original media URLs into GitHub artifacts.
 
