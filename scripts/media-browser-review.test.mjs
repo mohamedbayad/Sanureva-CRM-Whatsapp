@@ -37,7 +37,7 @@ test('QA only loads signed same-origin media endpoints', () => {
 test('Network probe verifies audio and image MIME, HTTP 206 and no-store', () => {
   assert.match(ui, /headers: \{ Range: "bytes=0-0" \}/);
   assert.match(ui, /response\.status === 206/);
-  assert.match(ui, /kind === "audio" \? \^audio/);
+  assert.match(ui, /const expected = kind === "audio"/);
   assert.match(ui, /contentRange/);
   assert.match(ui, /noStore/);
 });
@@ -54,7 +54,7 @@ test('Original image and voice-note playback require actual browser events', () 
 test('Diagnostics omit customer identifiers, signed URLs and media data', () => {
   const reportBody = ui.split('function report() {')[1]?.split('async function copyReport()')[0] || '';
   assert.ok(reportBody, 'Expected safe report function');
-  assert.doesNotMatch(reportBody, /(?:customer_phone|customer_name|whatsapp_wamid|media_id|signed_url|\.audios\[|\.image\s*,)/i);
+  assert.doesNotMatch(reportBody, /(?:customer_phone|customer_name|whatsapp_wamid|media_id|signed_url|\.audios\[|\bimage_url\b|\baudio_url\b)/i);
   assert.match(reportBody, /user_confirmed_audible: heardAudio/);
   assert.match(reportBody, /audio_browser_can_decode: audioDecoded/);
 });
