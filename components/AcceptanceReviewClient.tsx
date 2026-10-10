@@ -72,13 +72,17 @@ const manualLabels = [
     text: "Order records show correct WooCommerce/WhatsApp statuses and no edit actions." },
   { key: "dashboard", title: "Dashboard", href: "/",
     text: "Order/conversation/message counts and KPI cards load without errors." },
+  { key: "mobile", title: "Mobile Inbox", href: "/inbox",
+    text: "At narrow/mobile width, I can navigate chats, read messages, see images and play voice notes without overlap or clipping." },
+  { key: "read_only", title: "Read-only security", href: "/inbox",
+    text: "Inbox has no Send/Queue composer; Orders has no edit controls. In a private/incognito window, an unsigned-in request to /api/snapshot does not expose data." },
 ] as const;
 type ManualKey = typeof manualLabels[number]["key"];
 
 export function AcceptanceReviewClient() {
   const [report, setReport] = useState<Report | null>(null);
   const [manual, setManual] = useState<Record<ManualKey, boolean>>({
-    inbox: false, orders: false, dashboard: false,
+    inbox: false, orders: false, dashboard: false, mobile: false, read_only: false,
   });
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
@@ -93,11 +97,13 @@ export function AcceptanceReviewClient() {
         fetch("/api/snapshot", { credentials: "same-origin", cache: "no-store" }),
       ]);
       if (!pageRes.ok || !snapshotRes.ok) {
-        throw new Error(
-          pageRes.status === 401 || snapshotRes.status === 401
-            ? "Sign in to CRM before checking Inbox and Orders."
-            : "Preview snapshot or page QA is not available."
-        );
+        if (pageRes.status !== 409 || !snapshotRes.ok) {
+          throw new Error(
+            pageRes.status === 401 || snapshotRes.status === 401
+              ? "Sign in to CRM before checking Inbox and Orders."
+              : "Preview snapshot or page QA is not available."
+          );
+        }
       }
       const qa = await pageRes.json() as PageQa;
       const snapshot = await snapshotRes.json() as CrmSnapshot;
@@ -123,6 +129,8 @@ export function AcceptanceReviewClient() {
       manual_inbox_confirmed: manual.inbox,
       manual_orders_confirmed: manual.orders,
       manual_dashboard_confirmed: manual.dashboard,
+      manual_mobile_confirmed: manual.mobile,
+      manual_read_only_security_confirmed: manual.read_only,
       overall_acceptance: automaticPass && manualComplete,
     }, null, 2);
   }
