@@ -7,6 +7,7 @@ import { Activity, BarChart3, Inbox, LayoutDashboard, ListChecks, MessageSquareT
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inbox", label: "WhatsApp Inbox", icon: Inbox },
+  ...(process.env.NEXT_PUBLIC_ENABLE_INBOX_REVIEW === "1" ? [{ href: "/inbox-review", label: "Inbox Review", icon: ListChecks }] : []),
   { href: "/orders", label: "Orders", icon: ShoppingBag },
   { href: "/campaigns", label: "Campaign Analytics", icon: BarChart3 },
   { href: "/outbox", label: "Outbox", icon: Send },
