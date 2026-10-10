@@ -1,0 +1,33 @@
+name: Sanureva Preview Smoke (Temporary)
+on:
+  push:
+    branches:
+      - feature/neon-snapshot-fallback-20261009
+    paths:
+      - .github/workflows/sanureva-preview-smoke.yml
+permissions:
+  contents: read
+jobs:
+  read-only-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify protected CRM preview via public aggregate endpoints
+        env:
+          PREVIEW_URL: https://sanureva-crm-whatsapp-pgeti9dwb-mohamedbayads-projects.vercel.app
+        run: |
+          set -eu
+          for route in /api/neon-health /api/neon-review-summary; do
+            status=$(curl -sS --max-time 25 -o /tmp/sanureva-response.json -w "%{http_code}" "$PREVIEW_URL$route")
+            echo "$route: HTTP $status"
+            test "$status" = "200"
+            node -e 'const d=JSON.parse(require("node:fs").readFileSync("/tmp/sanureva-response.json","utf8"));if(d.ok!==true||d.writes_enabled!==false)process.exit(2);console.log("Read-only endpoint passed")'
+          done
+          for route in /api/snapshot /api/neon-page-qa; do
+            status=$(curl -sS --max-time 25 -o /dev/null -w "%{http_code}" "$PREVIEW_URL$route")
+            echo "$route anonymous access: HTTP $status"
+            test "$status" = "401"
+          done
+          status=$(curl -sS --max-time 25 -o /dev/null -w "%{http_code}" "$PREVIEW_URL/inbox")
+          echo "/inbox anonymous access: HTTP $status"
+          test "$status" = "307" || test "$status" = "308"
