@@ -8,6 +8,7 @@ const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inbox", label: "WhatsApp Inbox", icon: Inbox },
   ...(process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1" ? [{ href: "/media-review", label: "Media Playback QA", icon: ShieldCheck }] : []),
+  ...(process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1" ? [{ href: "/acceptance-review", label: "Inbox & Orders QA", icon: ListChecks }] : []),
   ...(process.env.NEXT_PUBLIC_ENABLE_INBOX_REVIEW === "1" ? [{ href: "/inbox-review", label: "Inbox Review", icon: ListChecks }] : []),
   { href: "/orders", label: "Orders", icon: ShoppingBag },
   ...(process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1"
