@@ -54,3 +54,11 @@
 The inactive n8n workflow `yFR4lEKYbBGy55bP` now allows the claim path when `eligible_conversations > 0` **or** `pending_archives > 0`, only while `dry_run=false` and all no-delete/keep-orders safeguards pass. This fixes the previous no-new-candidate resume gate. Current operation remains dry-run and inactive.
 
 The isolated branch confirmed one initial unique lease claim and that an immediate second claim does not duplicate it. The expired-lease retry execution was not confirmed because the database connector rejected the follow-up test. The QA policy was restored to `dry_run=true`. Do not label expiry recovery or simultaneous concurrency verified. Retain activation hold and test using a scoped QA Postgres credential before using unattended backups.
+
+## Regression CI QA (2026-10-10)
+
+The actual `Gate Backup Only` n8n Code-node logic has been snapshotted in `scripts/archive-lease-gate.test.mjs`, with **7 Node.js tests** for dry-run fail-closed behavior, resumable pending-only archives, zero-candidate no-op, unsafe policy rejection, and structural lease/finalizer SQL invariants. CI workflow `.github/workflows/neon-snapshot-pr.yml` now executes this suite during feature-branch validation. [Run 38083772238](https://github.com/mohamedbayad/Sanureva-CRM-Whatsapp/actions/runs/38083772238) passed all 7 tests, typecheck, and production build.
+
+The lease migration `scripts/archive-backup-leases.sql` was updated to prevent an exhausted/previously-reserved archive candidate from blocking newer conversations; the inactive worker now counts only expired/unleased `pending` or `failed` snapshots with `retry_count < 3`. Audit `scripts/archive-lease-audit-readonly.sql` verified the QA branch currently has 3 retryable synthetic rows and no mismatched S3 lease-token paths, with `dry_run=true`.
+
+**Limitations:** The 7 tests exercise a snapshot of n8n gate logic plus SQL source checks; they are not a live concurrent Postgres execution or full n8n-to-QA-Postgres-to-S3 validation. Since changing the QA policy to run the expired-lease scenario was blocked by the connector, **expired-lease resume and stale-token runtime rejection remain unverified**. Do not enable archive automation, deploy SQL functions on Main, or change dry-run. Any later edit to the n8n gate requires updating this test snapshot.
