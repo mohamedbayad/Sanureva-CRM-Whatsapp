@@ -48,3 +48,9 @@
 - Treat media-labelled PDF records lacking a WhatsApp media ID as references, **not** as verified stored PDF binaries.
 - Use only one snapshot per eligible conversation/last-activity combination; SQL unique constraints prevent duplicate archive rows, but concurrency of object uploads still needs a lease-based test.
 - This is **backup-only**, not a purge or retention policy; source conversations must remain readable in CRM.
+
+## Retry gate checkpoint (2026-10-10)
+
+The inactive n8n workflow `yFR4lEKYbBGy55bP` now allows the claim path when `eligible_conversations > 0` **or** `pending_archives > 0`, only while `dry_run=false` and all no-delete/keep-orders safeguards pass. This fixes the previous no-new-candidate resume gate. Current operation remains dry-run and inactive.
+
+The isolated branch confirmed one initial unique lease claim and that an immediate second claim does not duplicate it. The expired-lease retry execution was not confirmed because the database connector rejected the follow-up test. The QA policy was restored to `dry_run=true`. Do not label expiry recovery or simultaneous concurrency verified. Retain activation hold and test using a scoped QA Postgres credential before using unattended backups.
