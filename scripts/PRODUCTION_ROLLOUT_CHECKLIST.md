@@ -6,7 +6,7 @@ Updated: 2026-10-10. This checklist is for release review, not permission to dep
 ## Verified environment state
 
 - Preview feature branch: `feature/neon-snapshot-fallback-20261009`; CI compiles, typechecks, archive lease regression tests and synthetic media component tests.
-- Protected Vercel Preview is READY, but **real authenticated browser Audio/Image playback has not been visually tested**. The connected Vercel fetch route returned `403` at deployment protection; do not claim playback acceptance.
+- Protected Vercel Preview is READY. User-confirmed browser Media Playback QA PASSED for one original image and one audible voice note; Inbox/Orders/Dashboard acceptance is still pending. Connected Vercel tool remains blocked by team authorization (403).
 - Read-only n8n WhatsApp media workflow `JwyevJi6J5pQbcUd` is active. It responds with WhatsApp original binary MIME as `Content-Type`. Actual response after the latest MIME fix needs authenticated browser/network validation.
 - Inactive QA backup worker `JjYsvczPWfe47E1P`; inactive synthetic worker `pWpPHAXFz1AGwdUb`; inactive independent QA restore worker `L8QjmzHhGE6fnCIA`. **Do not enable these in Production.**
 - QA accomplishments: isolated S3 gzip SHA-256 and byte-exact roundtrip; QA-only expired-lease retry to verified; independent download; 2-row isolated restore import and replay with 0 duplicates; 2-request parallel claim returned exactly one reservation. No prolonged concurrency stress test.
@@ -37,6 +37,8 @@ An authenticated, Preview-only `/media-review` page now appears in the sidebar a
 5. Mark Gate A complete only when the actual browser confirms both picture display and audible sound, with secure HTTP tests passing.
 
 The dedicated page was created because the connected Vercel credential cannot access the protected team `mohamedbayads-projects` (HTTP 403), even though public metadata/deployments are sometimes readable. The Vercel connection must be authorized to that team before browser automation can be trusted. Do not relax deployment authentication to work around this.
+
+- [ ] Complete [Inbox & Orders QA](/acceptance-review) on signed-in feature Preview, including automated aggregate checks and human confirmations for Inbox, Orders and Dashboard. See `scripts/INBOX_ORDERS_QA_README.md`.
 
 ## Gate B: Backup-only data & security review — NOT AUTHORIZED FOR MAIN
 
