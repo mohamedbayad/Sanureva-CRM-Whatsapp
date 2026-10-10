@@ -1,0 +1,26 @@
+name: Sanureva Media Preview QA Temp
+on:
+  push:
+    branches: [feature/neon-snapshot-fallback-20261009]
+    paths: [.github/workflows/sanureva-media-qa-temporary.yml]
+permissions:
+  contents: read
+jobs:
+  media-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check isolated Preview media URL readiness and auth boundaries
+        env:
+          SITE: https://sanureva-crm-whatsapp-jnrt5b7wg-mohamedbayads-projects.vercel.app
+        run: |
+          set -eu
+          http=$(curl -sS --max-time 30 -o /tmp/qa.json -w '%{http_code}' "$SITE/api/neon-review-summary")
+          echo "Preview QA HTTP $http"
+          test "$http" = 200
+          node -e 'const j=JSON.parse(require("fs").readFileSync("/tmp/qa.json","utf8"));let q=j.page_qa||{};console.log("PAGE_CHECK",JSON.stringify({ok:q.ok,source:q.source,checks:q.checks,counts:q.counts,media:q.media}));if(!q.ok||q.source!=="neon"||q.media?.total!==20||q.media?.url_ready!==20)process.exit(3)'
+          for route in /api/media /api/snapshot /api/neon-page-qa; do
+            http=$(curl -sS --max-time 25 -o /dev/null -w '%{http_code}' "$SITE$route")
+            echo "NO_LOGIN $route HTTP $http"
+            test "$http" = 401
+          done
