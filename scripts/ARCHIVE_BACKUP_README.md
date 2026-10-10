@@ -62,3 +62,20 @@ The actual `Gate Backup Only` n8n Code-node logic has been snapshotted in `scrip
 The lease migration `scripts/archive-backup-leases.sql` was updated to prevent an exhausted/previously-reserved archive candidate from blocking newer conversations; the inactive worker now counts only expired/unleased `pending` or `failed` snapshots with `retry_count < 3`. Audit `scripts/archive-lease-audit-readonly.sql` verified the QA branch currently has 3 retryable synthetic rows and no mismatched S3 lease-token paths, with `dry_run=true`.
 
 **Limitations:** The 7 tests exercise a snapshot of n8n gate logic plus SQL source checks; they are not a live concurrent Postgres execution or full n8n-to-QA-Postgres-to-S3 validation. Since changing the QA policy to run the expired-lease scenario was blocked by the connector, **expired-lease resume and stale-token runtime rejection remain unverified**. Do not enable archive automation, deploy SQL functions on Main, or change dry-run. Any later edit to the n8n gate requires updating this test snapshot.
+
+## QA PostgreSQL credential handoff — 2026-10-10
+
+On isolated Neon branch `qa-archive-lifecycle-20261010` (`br-mute-snow-b7eqhu6o`), a minimal archive role `sanureva_archive_qa` was created **via SQL** and granted SELECT only on policy/candidates/conversations/messages/orders/outbox/archive ledgers, INSERT+UPDATE on conversation archives, INSERT on archived keys, and EXECUTE of QA lease functions. It has `NOLOGIN NOINHERIT NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`, no inherited roles, no schema CREATE, no permissions to DELETE messages/media/orders or UPDATE orders. Any API-created role inheriting `neon_superuser` was removed immediately and verified absent.
+
+**Do not use or modify the existing n8n credential** `Postgres account` — it is connected to Main. The connected n8n tool can inspect credentials but cannot create new ones. For a full isolated test, an administrator must create a QA-only login and an n8n Postgres credential securely, without sharing a password in ChatGPT:
+
+- Neon project: `holy-bread-50636263`, branch: `br-mute-snow-b7eqhu6o`, database: `sanureva`
+- Host: `ep-little-scene-b74c4vgm.c-13.us-east-1.aws.neon.tech`, port `5432`, TLS/SSL required
+- Role: `sanureva_archive_qa`; **currently NOLOGIN**. Only enable LOGIN and set a strong unique password in the QA branch's SQL editor. Never reuse the Main role, password, or connection string.
+- In n8n, create a **new** credential named `Sanureva Neon Archive QA (isolated)` and duplicate the *inactive* Backup-only workflow. Replace **every Postgres node credential in that duplicate only** with the QA credential.
+- Before triggering, isolate the S3 test object namespace from live customer archives and verify finalizer SQL keys/buckets correspond to that isolation. The current `sanureva-archives` S3 credential alone does not establish that objects are QA-only.
+- Keep source worker and Main `archive_settings` unchanged (`dry_run=true`); never activate/publish the QA or production worker for routine automation during tests.
+
+The guarded role policy is versioned in `scripts/archive-qa-role.sql`, which refuses to run without an isolated synthetic conversation fixture. The QA connection remains **unconfigured**, and live leased end-to-end testing remains **pending**.
+
+CI [run 38085754981](https://github.com/mohamedbayad/Sanureva-CRM-Whatsapp/actions/runs/38085754981): 8/8 archive regression tests, TypeScript, and build passed. These are static/mocked checks and role permission introspection, not a real positive credentialed backup end-to-end.
