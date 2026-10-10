@@ -28,7 +28,7 @@ export default function DashboardPage() {
   ] as const;
 
   return <>
-    <PageHeader title="Operations Dashboard" subtitle="Live operations view served directly by the Sanureva n8n CRM Gateway." data={data} refresh={refresh}/>
+    <PageHeader title="Operations Dashboard" subtitle={process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1" ? "Read-only Neon preview · updates may lag Google Sheets by up to 15 minutes." : "Live operations view served directly by the Sanureva n8n CRM Gateway."} data={data} refresh={refresh}/>
     {error && <div className="warningBox">Last sync warning: {error}</div>}
     {!data.contractOk && <div className="warningBox"><strong>Sheet contract warning:</strong> {data.contractWarnings.join(" • ")}</div>}
     <section className="metricGrid">{cards.map(([label, value, Icon, sub]) => <div className="metricCard" key={label}><div className="metricIcon"><Icon size={19}/></div><div><span>{label}</span><strong>{value}</strong><small>{sub}</small></div></div>)}</section>

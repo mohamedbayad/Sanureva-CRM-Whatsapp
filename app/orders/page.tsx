@@ -16,7 +16,7 @@ export default function OrdersPage() {
   const filtered = useMemo(() => rows.filter((r) => !q || ["Order ID","Customer Name","Phone Number","City","Items / Products","WooCommerce Status","WhatsApp Status"].some((k) => textIncludes(r[k], q))), [rows, q]);
   if (loading && !data) return <Loading/>;
   return <>
-    <PageHeader title="Orders" subtitle="Orders served through n8n, with the existing order automation logic left unchanged." data={data} refresh={refresh}/>
+    <PageHeader title="Orders" subtitle={process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1" ? "Read-only Neon preview · orders remain managed by WooCommerce and n8n." : "Orders served through n8n, with the existing order automation logic left unchanged."} data={data} refresh={refresh}/>
     {error && <div className="warningBox">{error}</div>}
     <section className="panel"><div className="toolbar"><div className="search"><Search size={16}/><input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Search order, customer, phone, city…"/></div><span className="count">{filtered.length} orders</span></div>
       <div className="tableWrap"><table className="wide"><thead><tr><th>Order</th><th>Customer</th><th>Phone</th><th>Products</th><th>Total</th><th>WooCommerce</th><th>WhatsApp</th><th>Delivery</th><th>Created</th></tr></thead><tbody>
