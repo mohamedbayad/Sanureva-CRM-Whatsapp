@@ -103,7 +103,7 @@ export default function InboxReviewPage() {
           {tab === "unassigned" ? (
             <>
               <p style={{ margin: "12px 0 18px" }}>
-                These messages have no reliable conversation ID or customer phone in the source.
+                These historical records have no reliable conversation ID, customer phone, or original message content in the source.
                 They are preserved and must not be linked by guesswork.
               </p>
               <div className="tableWrap">
@@ -112,9 +112,9 @@ export default function InboxReviewPage() {
                   <tbody>
                     {filteredUnassigned.map((m) => <tr key={m.id}>
                       <td>{formatDate(m.timestamp)}</td>
-                      <td>{cleanDisplay(m.kind)} <small>{cleanDisplay(m.direction)}</small></td>
+                      <td>{cleanDisplay(m.kind) === "text" && cleanDisplay(m.direction) === "system" && !cleanDisplay(m.preview_text) ? "Unknown type" : cleanDisplay(m.kind)} <small>{cleanDisplay(m.direction) === "system" && !cleanDisplay(m.preview_text) ? "Missing source details" : cleanDisplay(m.direction)}</small></td>
                       <td style={{ minWidth: 250, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-                        {cleanDisplay(m.preview_text).slice(0, 500) || "No text available"}
+                        {cleanDisplay(m.preview_text).slice(0, 500) || "Original content missing in Google Sheets"}
                       </td>
                       <td className="mono" title={m.whatsapp_wamid || m.id}>
                         {cleanDisplay(m.whatsapp_wamid || m.id).slice(0, 28)}…
