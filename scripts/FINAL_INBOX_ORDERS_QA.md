@@ -46,3 +46,17 @@ Synthetic CI tests `scripts/inbox-orders-acceptance.test.mjs` and `scripts/inbox
 4. Complete checkboxes only for verified behaviors and click **Copy safe QA report**.
 5. Do not merge PR #2, switch Main archive dry-run or activate backup until all release gates pass and the owner explicitly approves that action.
 
+
+## User-provided protected Preview acceptance report — 2026-10-10
+
+A PII-free JSON report was supplied from the authenticated `/acceptance-review` tool. **Automated aggregate checks: PASS; overall manual acceptance: NOT YET COMPLETE.**
+
+- `automated_pass=true`, `source_neon=true`, `contract_ok=true`, `summary_counts_consistent=true`.
+- Displayed snapshot: **46 conversations, 431 filtered messages, 12 orders**.
+- `orders_unique=true`, `duplicate_orders=0`; `messages_linked=true`, `unlinked=0`; `callbacks_excluded=true`, `status_callbacks_visible=0`.
+- `metrics_valid=true`, `no_page_qa_writes=true`.
+- `manual_inbox_confirmed=false`, `manual_orders_confirmed=false`, `manual_dashboard_confirmed=false`, `manual_mobile_confirmed=false`, `manual_read_only_security_confirmed=false`; **`overall_acceptance=false`**.
+
+The 431 displayed messages are the filtered chat messages. There were 447 raw Main Neon records at the preceding audit, including 16 legacy delivery/status-only callback records correctly omitted from Inbox. The submitted report proves the **aggregate validation** passed in the signed-in Preview, not that the real UI layout or negative authentication flow were manually checked. The prior separate Media Playback QA confirmed one real image and one audible voice note.
+
+**Next step:** use the same Preview's `/acceptance-review` links to manually verify Inbox, Orders, Dashboard, mobile layout and read-only/unsigned-in access, check only items genuinely inspected, and share the new PII-free report. Do not merge, activate automatic backup, or authorize deletion based solely on automatic PASS.
