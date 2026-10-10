@@ -3,7 +3,7 @@ import type { SheetName } from "@/lib/contracts";
 export type SheetRecord = Record<string, string | number | boolean | null>;
 
 export type CrmSnapshot = {
-  source: "n8n";
+  source: "n8n" | "neon";
   syncedAt: string;
   contractOk: boolean;
   contractWarnings: string[];
