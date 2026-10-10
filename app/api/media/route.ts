@@ -8,10 +8,10 @@ const IS_PREVIEW = process.env.VERCEL_ENV === "preview" &&
   process.env.CRM_PREVIEW_DIRECT_READ === "1";
 // Preview media can only use a separately scoped download endpoint.
 // Never send its requests to the n8n API endpoint that also permits sending.
-const SECRET = (IS_PREVIEW
-  ? process.env.CRM_PREVIEW_SESSION_SECRET : process.env.N8N_CRM_API_KEY || "").trim();
-const GATEWAY = (IS_PREVIEW
-  ? process.env.N8N_MEDIA_READ_WEBHOOK_URL : process.env.N8N_CRM_WEBHOOK_URL || "").trim();
+const SECRET = ((IS_PREVIEW
+  ? process.env.CRM_PREVIEW_SESSION_SECRET : process.env.N8N_CRM_API_KEY) || "").trim();
+const GATEWAY = ((IS_PREVIEW
+  ? process.env.N8N_MEDIA_READ_WEBHOOK_URL : process.env.N8N_CRM_WEBHOOK_URL) || "").trim();
 const PREVIEW_MEDIA_KEY = (process.env.N8N_MEDIA_READ_KEY || "").trim();
 const MAX_SIZE = 16 * 1024 * 1024;
 
