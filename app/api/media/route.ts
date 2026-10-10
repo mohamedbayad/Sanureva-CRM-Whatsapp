@@ -3,8 +3,16 @@ import { NextRequest } from "next/server";
 import { verifyCrmSession, CRM_SESSION_COOKIE } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
-const SECRET = (process.env.N8N_CRM_API_KEY || "").trim();
-const GATEWAY = (process.env.N8N_CRM_WEBHOOK_URL || "").trim();
+const IS_PREVIEW = process.env.VERCEL_ENV === "preview" &&
+  process.env.CRM_READ_SOURCE === "neon_shadow" &&
+  process.env.CRM_PREVIEW_DIRECT_READ === "1";
+// Preview media can only use a separately scoped download endpoint.
+// Never send its requests to the n8n API endpoint that also permits sending.
+const SECRET = (IS_PREVIEW
+  ? process.env.CRM_PREVIEW_SESSION_SECRET : process.env.N8N_CRM_API_KEY || "").trim();
+const GATEWAY = (IS_PREVIEW
+  ? process.env.N8N_MEDIA_READ_WEBHOOK_URL : process.env.N8N_CRM_WEBHOOK_URL || "").trim();
+const PREVIEW_MEDIA_KEY = (process.env.N8N_MEDIA_READ_KEY || "").trim();
 const MAX_SIZE = 16 * 1024 * 1024;
 
 export async function GET(request: NextRequest) {
@@ -17,7 +25,19 @@ export async function GET(request: NextRequest) {
   const exp = Number(query.get("exp") || 0);
   const sig = query.get("sig") || "";
   const now = Math.floor(Date.now() / 1000);
-  if (!SECRET || !GATEWAY) return new Response("Media integration not configured", { status: 503 });
+  if (!SECRET || !GATEWAY || (IS_PREVIEW && !PREVIEW_MEDIA_KEY)) {
+    return new Response("Media integration not configured", { status: 503 });
+  }
+  if (IS_PREVIEW) {
+    try {
+      const endpoint = new URL(GATEWAY);
+      if (endpoint.protocol !== "https:" || !endpoint.pathname.startsWith("/webhook/")) {
+        return new Response("Preview media gateway is not a secure read-only webhook", { status: 503 });
+      }
+    } catch {
+      return new Response("Preview media gateway URL invalid", { status: 503 });
+    }
+  }
   if (!/^\d{8,30}$/.test(id) || !["image","audio","video","document"].includes(kind) ||
     !Number.isInteger(exp) || exp < now || exp > now + 3600 ||
     !/^[a-f0-9]{64}$/.test(sig)) {
@@ -31,8 +51,12 @@ export async function GET(request: NextRequest) {
   try {
     const upstream = await fetch(GATEWAY, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-CRM-Key": SECRET },
-      body: JSON.stringify({ action: "get_media", media_id: id }),
+      headers: IS_PREVIEW
+        ? { "Content-Type": "application/json", "X-Preview-Media-Key": PREVIEW_MEDIA_KEY }
+        : { "Content-Type": "application/json", "X-CRM-Key": SECRET },
+      body: IS_PREVIEW
+        ? JSON.stringify({ media_id: id })
+        : JSON.stringify({ action: "get_media", media_id: id }),
       cache: "no-store",
       signal: AbortSignal.timeout(30000),
     });
