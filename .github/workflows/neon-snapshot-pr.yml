@@ -14,6 +14,10 @@ on:
       - scripts/archive-lease-gate.test.mjs
       - scripts/media-ui-preview.test.mjs
       - scripts/media-api-runtime.test.mjs
+      - scripts/media-browser-review.test.mjs
+      - app/media-review/page.tsx
+      - components/MediaReviewClient.tsx
+      - components/Sidebar.tsx
       - components/MediaBubble.tsx
       - app/inbox/page.tsx
       - app/api/media/route.ts
@@ -45,6 +49,8 @@ jobs:
         run: node --test scripts/media-ui-preview.test.mjs
       - name: Exercise authenticated synthetic media proxy responses
         run: node --test scripts/media-api-runtime.test.mjs
+      - name: Verify read-only browser QA and privacy guards
+        run: node --test scripts/media-browser-review.test.mjs
       - name: Next.js production build
         run: npm run build
       - name: Commit generated lockfile to feature branch
