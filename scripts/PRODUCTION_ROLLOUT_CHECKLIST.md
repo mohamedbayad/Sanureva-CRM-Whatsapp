@@ -13,7 +13,7 @@ Updated: 2026-10-10. This checklist is for release review, not permission to dep
 - **Main Neon:** archive policy `dry_run=true`, `preserve_orders=true`, `allow_message_delete=false`, `allow_media_delete=false`; no real archives or archived keys at last audit. Counts of active orders and messages may change during ongoing sync.
 - SQL finalizer / lease migrations are QA-only; **not installed on Main**. Existing candidate media-count VIEW was corrected on Main; rollback is available.
 
-## Gate A: CRM Preview — MEDIA PLAYBACK VERIFIED; OTHER CHECKS PENDING
+## Gate A: CRM Preview — PASS (USER-CONFIRMED)
 
 Use the latest Vercel Preview from the feature branch and a legitimately authenticated browser session. Never copy CRM cookies, passwords or original media URLs into GitHub artifacts.
 
@@ -38,7 +38,7 @@ An authenticated, Preview-only `/media-review` page now appears in the sidebar a
 
 The dedicated page was created because the connected Vercel credential cannot access the protected team `mohamedbayads-projects` (HTTP 403), even though public metadata/deployments are sometimes readable. The Vercel connection must be authorized to that team before browser automation can be trusted. Do not relax deployment authentication to work around this.
 
-- [ ] Complete [Inbox & Orders QA](/acceptance-review) on signed-in feature Preview, including automated aggregate checks and human confirmations for Inbox, Orders and Dashboard. See `scripts/INBOX_ORDERS_QA_README.md`.
+- [x] Completed authenticated [Inbox & Orders QA](/acceptance-review): automated checks PASS, and all five user-confirmed manual checks (Inbox, Orders, Dashboard, mobile, read-only security) PASS. Evidence: `scripts/FINAL_INBOX_ORDERS_QA.md`.
 
 ## Gate B: Backup-only data & security review — NOT AUTHORIZED FOR MAIN
 
@@ -69,4 +69,4 @@ These are **separate releases**. Do not combine them automatically:
 
 ## Rollout decision at this checkpoint
 
-**NO-GO** pending manual Inbox/Orders/Dashboard/mobile/read-only browser acceptance and explicit owner release approval. Authenticated original image/audio playback is already user-confirmed, and authenticated aggregate Inbox/Orders QA is PASS (46 conversations, 431 filtered messages, 12 orders, 0 duplicates, 0 unlinked, 0 callbacks). All five manual acceptance flags remain false (`overall_acceptance=false`). Backup-only activation additionally requires Gate B and independent approval. QA milestones are documented in `scripts/ARCHIVE_BACKUP_README.md` and `scripts/FINAL_INBOX_ORDERS_QA.md`.
+**Gate A PASS — user-confirmed CRM Preview acceptance**: original image/audio playback, aggregate data checks, Inbox, Orders, Dashboard, mobile and read-only security have all passed. The user's safe report states `automated_pass=true`, all five manual flags true and `overall_acceptance=true`; 46 conversations, 431 filtered messages and 12 orders with zero duplicates/unlinked/callback leakage. **RELEASE HOLD** continues until an explicit separate authorization to merge/deploy PR #2. Main archive SQL migrations and Production backup-only activation remain **NO-GO** pending Gate B and their own explicit approval. Deletion switches must remain disabled. See `scripts/ARCHIVE_BACKUP_README.md` and `scripts/FINAL_INBOX_ORDERS_QA.md`.
