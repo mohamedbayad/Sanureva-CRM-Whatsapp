@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart3, Inbox, LayoutDashboard, ListChecks, MessageSquareText, Send, ShoppingBag } from "lucide-react";
+import { Activity, BarChart3, Inbox, LayoutDashboard, ListChecks, MessageSquareText, Send, ShoppingBag, ShieldCheck } from "lucide-react";
 
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inbox", label: "WhatsApp Inbox", icon: Inbox },
+  ...(process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1" ? [{ href: "/media-review", label: "Media Playback QA", icon: ShieldCheck }] : []),
   ...(process.env.NEXT_PUBLIC_ENABLE_INBOX_REVIEW === "1" ? [{ href: "/inbox-review", label: "Inbox Review", icon: ListChecks }] : []),
   { href: "/orders", label: "Orders", icon: ShoppingBag },
   ...(process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1"
