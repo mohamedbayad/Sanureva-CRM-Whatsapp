@@ -21,7 +21,7 @@ WITH latest AS (
          OR lower(btrim(COALESCE(m.source_record->>'Media Kind', '')))
            IN ('image', 'audio', 'video', 'document')
          OR COALESCE(m.source_record->>'Message Content Snippet', '')
-           ~ '\\[\\[WA_MEDIA:(image|audio|video|document):[0-9]{8,30}\\]\\]'
+           ~ '\[\[WA_MEDIA:(image|audio|video|document):[0-9]{8,30}\]\]'
     ) AS media_count
   FROM public.conversations c
   LEFT JOIN public.messages m ON m.conversation_id = c.conversation_id
