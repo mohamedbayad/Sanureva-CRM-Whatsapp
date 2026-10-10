@@ -9,9 +9,13 @@ const items = [
   { href: "/inbox", label: "WhatsApp Inbox", icon: Inbox },
   ...(process.env.NEXT_PUBLIC_ENABLE_INBOX_REVIEW === "1" ? [{ href: "/inbox-review", label: "Inbox Review", icon: ListChecks }] : []),
   { href: "/orders", label: "Orders", icon: ShoppingBag },
-  { href: "/campaigns", label: "Campaign Analytics", icon: BarChart3 },
-  { href: "/outbox", label: "Outbox", icon: Send },
-  { href: "/events", label: "Events & Health", icon: Activity },
+  ...(process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1"
+    ? []
+    : [
+        { href: "/campaigns", label: "Campaign Analytics", icon: BarChart3 },
+        { href: "/outbox", label: "Outbox", icon: Send },
+        { href: "/events", label: "Events & Health", icon: Activity },
+      ]),
 ];
 
 export function Sidebar() {
@@ -30,7 +34,7 @@ export function Sidebar() {
       </nav>
       <div className="sidebarFoot">
         <ListChecks size={16}/>
-        <div><strong>Direct n8n backend</strong><span>Existing automations preserved</span></div>
+        <div><strong>{process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1" ? "Neon Preview (read-only)" : "Direct n8n backend"}</strong><span>Existing automations preserved</span></div>
       </div>
     </aside>
   );
