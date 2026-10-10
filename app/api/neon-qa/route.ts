@@ -47,19 +47,22 @@ export async function GET() {
     const uniqueOrders = new Set(orderRows.map((r) => String(r["Order ID"] || "")).filter(Boolean));
     const conversationKeys = new Set(conversations.map((r) => String(r["Conversation ID"] || "")).filter(Boolean));
     const linkedMessages = messages.filter((r) => conversationKeys.has(String(r["Conversation ID"] || ""))).length;
+    const unlinkedMessages = messages.length - linkedMessages;
     const missingMessageIds = messages.filter((r) => !String(r["Message ID"] || "").trim()).length;
+    const inboxDataReady = conversations.length > 0 && messages.length > 0 && unlinkedMessages === 0;
     const validOrders = uniqueOrders.size === orderRows.length && orderRows.length > 0;
     const dashboardReady = Number.isFinite(dashboard.orders) && Number.isFinite(dashboard.messages)
       && Number.isFinite(dashboard.confirmationRate) && Number.isFinite(dashboard.avgOrder);
     return NextResponse.json({
-      ok: dashboardReady && validOrders && contractWarnings.length === 0,
+      ok: dashboardReady && validOrders && inboxDataReady && contractWarnings.length === 0,
       mode: "neon_shadow", scope: "preview_only", write_access: false,
       checks: {
         dashboard: { ready: dashboardReady, orders: dashboard.orders,
           conversations: dashboard.conversations, messages: dashboard.messages },
-        inbox: { data_ready: conversations.length > 0 && messages.length > 0,
+        inbox: { data_ready: inboxDataReady,
           conversations: conversations.length, messages: messages.length,
-          linked_messages: linkedMessages, legacy_messages_without_id: missingMessageIds,
+          linked_messages: linkedMessages, unlinked_messages: unlinkedMessages,
+          legacy_messages_without_id: missingMessageIds,
           original_media_retrieval_tested: false },
         orders: { data_ready: validOrders, rows: orderRows.length,
           unique_order_ids: uniqueOrders.size, latest_order_list_renderable: latestOrders.length },
