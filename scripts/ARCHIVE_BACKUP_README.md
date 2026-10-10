@@ -109,3 +109,13 @@ Created an isolated child branch `qa-archive-parallel-claims-20261010` (`br-summ
 This verifies duplicate prevention in a two-request concurrent test, **not** a stress test with dozens of database sessions under artificial lock contention. The existing successful independent gzip restore test #38461 and QA E2E #38441 remain intact on the parent QA branch. Main database and original workers were not changed.
 
 Remaining before production release: independent restore import into a clean database (rather than comparison with intact original records); browser visual media QA; production migrations and rollout assessment; explicit user release authorization. Keep automatic archive inactive and both deletion flags disabled.
+
+## Isolated table restore / idempotency QA — 2026-10-10
+
+Extended the **inactive** [Independent S3 Archive Restore QA workflow](https://n8n-dhhy.srv1952669.hstgr.cloud/workflow/L8QjmzHhGE6fnCIA) to **11 nodes**. Created a dedicated `archive_restore_qa.restored_messages` table in QA Neon branch `br-mute-snow-b7eqhu6o` with a primary key on original message UUID and hard CHECK constraints limiting the archive UUID, conversation ID and message JSON identity to the synthetic fixture. Granted only `SELECT` and `INSERT` on this table to `sanureva_archive_qa`.
+
+The restore worker downloads the previously verified QA gzip from S3, hashes and decompresses it, checks manifest and counts, parameterizes the synthetic records as base64-encoded JSONB, and uses `ON CONFLICT (source_message_id) DO NOTHING` to restore into the **separate QA table**. It then independently compares text, message kinds, original WAMIDs, legacy IDs, and source media-marker snippets to untouched original QA messages and validates ledger/source counts.
+
+Initial test execution **38478** inserted 2 QA rows successfully but its downstream verification failed due to missing parameters after the database node. This flow mapping was corrected. Replay execution **38481: SUCCESS** — `inserted_now=0`, `total_restored=2`, `originals_preserved=true`, `ledger_intact=true`, `restore_count_match=true`, `restored_content_matches=true`; final report confirmed SHA256 and gzip byte-size match, 2 restored messages and no duplicate inserts.
+
+QA archive policy remains `dry_run=true`; Main Neon unchanged with safe policy, 0 archives/0 archived keys, 12 orders; all archive/restore workflows remain inactive. This demonstrates **isolated table** restore and idempotency, **not** total disaster recovery of a blank database or recovery of original media binaries.
