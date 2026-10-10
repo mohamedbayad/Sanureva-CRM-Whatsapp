@@ -11,6 +11,9 @@ on:
       - package-lock.json
       - lib/neon-snapshot.ts
       - lib/n8n.ts
+      - scripts/archive-lease-gate.test.mjs
+      - scripts/archive-backup-leases.sql
+      - scripts/archive-backup-leased-finalize.sql
       - .github/workflows/neon-snapshot-pr.yml
 permissions:
   contents: write
@@ -31,6 +34,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: TypeScript check
         run: npm run typecheck
+      - name: Run archive lease gate regressions
+        run: node --test scripts/archive-lease-gate.test.mjs
       - name: Next.js production build
         run: npm run build
       - name: Commit generated lockfile to feature branch
