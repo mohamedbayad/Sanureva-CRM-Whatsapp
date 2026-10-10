@@ -1,11 +1,13 @@
 import type { CrmSnapshot, SheetRecord } from "@/lib/types";
 import { SHEET_NAMES } from "@/lib/contracts";
 import { asNumber, cleanDisplay, dateValue } from "@/lib/format";
+import { isStatusOnlyRecord } from "@/lib/status-records";
 
 export function computeMetrics(snapshot: CrmSnapshot) {
   const orders = snapshot.sheets[SHEET_NAMES.orders] || [];
   const conversations = snapshot.sheets[SHEET_NAMES.conversations] || [];
-  const messages = snapshot.sheets[SHEET_NAMES.messages] || [];
+  // A legacy status callback is not a conversation message or delivery KPI denominator.
+  const messages = (snapshot.sheets[SHEET_NAMES.messages] || []).filter((m) => !isStatusOnlyRecord(m));
   const events = snapshot.sheets[SHEET_NAMES.events] || [];
   const outbox = snapshot.sheets[SHEET_NAMES.outbox] || [];
 
