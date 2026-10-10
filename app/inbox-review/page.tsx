@@ -12,6 +12,7 @@ type Message = {
   preview_text: string | null;
   delivery_status: string | null;
   whatsapp_wamid: string | null;
+  is_status_only: boolean;
 };
 type Recovered = {
   conversation_id: string;
@@ -41,7 +42,7 @@ export default function InboxReviewPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<"unassigned" | "recovered">("unassigned");
+  const [tab, setTab] = useState<"statuses" | "unassigned" | "recovered">("statuses");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -63,6 +64,11 @@ export default function InboxReviewPage() {
     !query || [m.id, m.whatsapp_wamid, m.preview_text, m.kind, m.direction]
       .some((v) => cleanDisplay(v).toLowerCase().includes(query.toLowerCase()))
   ), [data, query]);
+
+  const filteredStatuses = filteredUnassigned.filter((m) => m.is_status_only);
+  const filteredRealUnassigned = filteredUnassigned.filter((m) => !m.is_status_only);
+  const statusesCount = (data?.unassigned || []).filter((m) => m.is_status_only).length;
+  const realUnassignedCount = (data?.unassigned || []).length - statusesCount;
 
   const filteredRecovered = useMemo(() => (data?.recovered || []).filter((c) =>
     !query || [c.conversation_id, c.customer_phone, c.customer_name]
@@ -86,9 +92,13 @@ export default function InboxReviewPage() {
         <section className="panel" style={{ padding: 18 }}>
           <div className="toolbar" style={{ gap: 12, flexWrap: "wrap" }}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button className={tab === "statuses" ? "pill" : "pill subtle"}
+                onClick={() => setTab("statuses")}>
+                <ClipboardList size={15}/> Delivery callbacks ({statusesCount})
+              </button>
               <button className={tab === "unassigned" ? "pill" : "pill subtle"}
                 onClick={() => setTab("unassigned")}>
-                <ClipboardList size={15}/> Unlinked status records ({data.unassigned.length})
+                <ClipboardList size={15}/> Unlinked customer messages ({realUnassignedCount})
               </button>
               <button className={tab === "recovered" ? "pill" : "pill subtle"}
                 onClick={() => setTab("recovered")}>
@@ -100,19 +110,20 @@ export default function InboxReviewPage() {
                 placeholder="Search review records…" aria-label="Search review records"/>
             </div>
           </div>
-          {tab === "unassigned" ? (
+          {tab !== "recovered" ? (
             <>
               <p style={{ margin: "12px 0 18px" }}>
-                These records contain WhatsApp delivery statuses but no original message body or customer details.
-                They are preserved and must not be linked by guesswork.
+                {tab === "statuses"
+                  ? "These are delivery/status callbacks with no original message body or verified customer. They are preserved for tracking, never treated as chat messages."
+                  : "These are genuinely unlinked message records requiring source verification. No customer assignment is inferred."}
               </p>
               <div className="tableWrap">
                 <table className="wide">
                   <thead><tr><th>Time</th><th>Type</th><th>Original message</th><th>Reference</th><th>Delivery status</th></tr></thead>
                   <tbody>
-                    {filteredUnassigned.map((m) => <tr key={m.id}>
+                    {(tab === "statuses" ? filteredStatuses : filteredRealUnassigned).map((m) => <tr key={m.id}>
                       <td>{formatDate(m.timestamp)}</td>
-                      <td>{cleanDisplay(m.kind) === "text" && cleanDisplay(m.direction) === "system" && !cleanDisplay(m.preview_text) ? "Unknown type" : cleanDisplay(m.kind)} <small>{cleanDisplay(m.direction) === "system" && !cleanDisplay(m.preview_text) ? "Missing source details" : cleanDisplay(m.direction)}</small></td>
+                      <td>{m.is_status_only ? "Delivery callback" : cleanDisplay(m.kind)} <small>{m.is_status_only ? "WhatsApp status" : cleanDisplay(m.direction)}</small></td>
                       <td style={{ minWidth: 250, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
                         {cleanDisplay(m.preview_text).slice(0, 500) || "Status record only — no original message body"}
                       </td>
@@ -123,7 +134,8 @@ export default function InboxReviewPage() {
                     </tr>)}
                   </tbody>
                 </table>
-                {!filteredUnassigned.length && <div className="emptyState">No matching unassigned messages.</div>}
+                {!(tab === "statuses" ? filteredStatuses : filteredRealUnassigned).length &&
+                  <div className="emptyState">{tab === "statuses" ? "No matching status callbacks." : "No unlinked customer messages found."}</div>}
               </div>
             </>
           ) : (
