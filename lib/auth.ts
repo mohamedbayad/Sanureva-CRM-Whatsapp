@@ -4,9 +4,12 @@ export const CRM_SESSION_COOKIE = "sanureva_crm_session";
 const SESSION_SECONDS = 60 * 60 * 12;
 
 function credentials() {
+  // Isolated preview review login: never reuse the production WhatsApp API secret.
+  const privatePreview = process.env.VERCEL_ENV === "preview" &&
+    process.env.CRM_READ_SOURCE === "neon_shadow";
   return {
-    password: (process.env.CRM_DASHBOARD_PASSWORD || "").trim(),
-    apiKey: (process.env.N8N_CRM_API_KEY || "").trim(),
+    password: (privatePreview ? (process.env.CRM_REVIEW_PASSWORD || "") : (process.env.CRM_DASHBOARD_PASSWORD || "")).trim(),
+    apiKey: (privatePreview ? (process.env.CRM_PREVIEW_SESSION_SECRET || "") : (process.env.N8N_CRM_API_KEY || "")).trim(),
   };
 }
 
@@ -38,7 +41,10 @@ export function checkCrmPassword(input: string): boolean {
   const { password } = credentials();
   if (!password || !authIsConfigured()) return false;
   const left = createHmac("sha256", password).update("compare").digest();
-  const right = createHmac("sha256", input).update("compare").digest();
+  const candidate = process.env.VERCEL_ENV === "preview" && process.env.CRM_READ_SOURCE === "neon_shadow"
+    ? input.trim()
+    : input;
+  const right = createHmac("sha256", candidate).update("compare").digest();
   return timingSafeEqual(left, right);
 }
 

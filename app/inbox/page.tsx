@@ -15,6 +15,7 @@ function byLatest(messages: SheetRecord[], conversationId: string) {
 }
 
 export default function InboxPage() {
+  const previewReadonly = process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1";
   const { data, loading, error, refresh } = useCrm();
   const [selected, setSelected] = useState("");
   const [q, setQ] = useState("");
@@ -44,7 +45,7 @@ export default function InboxPage() {
 
   async function send(e: FormEvent) {
     e.preventDefault();
-    if (!active || !phone) return;
+    if (previewReadonly || !active || !phone) return;
     setSending(true); setNotice("");
     try {
       const response = await fetch("/api/outbox", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ phone, customer: cleanDisplay(active["Customer Name"]), orderId, type, message:text, mediaUrl, fileName }) });
@@ -59,7 +60,7 @@ export default function InboxPage() {
 
   if (loading && !data) return <Loading/>;
   return <>
-    <PageHeader title="WhatsApp Inbox" subtitle="Live CRM view served by n8n. Manual replies are sent to n8n, which keeps the existing WhatsApp, Sheet and WooCommerce logic in control." data={data} refresh={refresh}/>
+    <PageHeader title="WhatsApp Inbox" subtitle={previewReadonly ? "Read-only Neon preview · message sending is disabled. Original WhatsApp media has not yet been verified." : "Live CRM view served by n8n. Manual replies are sent to n8n, which keeps the existing WhatsApp, Sheet and WooCommerce logic in control."} data={data} refresh={refresh}/>
     {error && <div className="warningBox">{error}</div>}
     <section className="inboxPanel">
       <aside className="chatList">
@@ -70,11 +71,13 @@ export default function InboxPage() {
         {active ? <>
           <div className="conversationHead"><div><strong>{cleanDisplay(active["Customer Name"]) || "Customer"}</strong><span>{phone} {orderId ? `· Order #${orderId}` : ""}</span></div><span className="pill subtle">{cleanDisplay(active["Intent / Topic"]) || "WhatsApp"}</span></div>
           <div className="messages">{thread.length ? thread.map((m,i)=>{ const inbound=cleanDisplay(m.Direction).toLowerCase().includes("inbound"); return <div key={`${cleanDisplay(m["Message ID"])}-${i}`} className={inbound?"bubbleRow inbound":"bubbleRow outbound"}><div className="bubble"><MediaBubble message={m} /><small>{cleanDisplay(m["Message Type"])} · {cleanDisplay(m["Delivery Status"])} · {formatDate(m.Timestamp)}</small></div></div> }) : <div className="emptyState">No logged messages for this conversation.</div>}</div>
-          <form className="composer" onSubmit={send}>
+          {previewReadonly ? (
+            <div className="composer" role="status"><strong>Read-only preview</strong><p>No WhatsApp messages can be sent from this environment. Original media links are not available until the secure media migration is verified.</p></div>
+          ) : <form className="composer" onSubmit={send}>
             <div className="composeTop"><select value={type} onChange={(e)=>setType(e.target.value as OutboxPayload["type"])}><option>Text</option><option>Image</option><option>PDF</option><option>Video</option></select>{type!=="Text" && <><div className="fieldInline"><Paperclip size={15}/><input value={mediaUrl} onChange={(e)=>setMediaUrl(e.target.value)} placeholder="Public media URL"/></div>{type==="PDF" && <input className="fileName" value={fileName} onChange={(e)=>setFileName(e.target.value)} placeholder="file.pdf"/>}</>}</div>
             <div className="composeMain"><textarea value={text} onChange={(e)=>setText(e.target.value)} placeholder={type==="Text"?"Type a manual WhatsApp reply…":"Caption / message (optional)"}/><button disabled={sending || !data} title="Send through n8n"><SendHorizontal size={18}/>{sending?"Queueing…":"Queue"}</button></div>
             {notice && <div className="composeNotice">{notice}</div>}
-          </form>
+          </form>}
         </> : <div className="emptyState">No conversation selected.</div>}
       </div>
     </section>

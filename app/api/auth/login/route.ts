@@ -11,7 +11,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
   }
   const session = newCrmSession();
-  const response = NextResponse.json({ ok: true });
+  const landing = process.env.VERCEL_ENV === "preview" && process.env.CRM_READ_SOURCE === "neon_shadow" ? "/inbox-review" : "/";
+  const response = NextResponse.json({ ok: true, landing });
   response.cookies.set(CRM_SESSION_COOKIE, session.value, {
     maxAge: session.maxAge,
     httpOnly: true,

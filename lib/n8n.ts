@@ -1,6 +1,7 @@
 import type { CrmSnapshot, OutboxPayload, SheetRecord } from "@/lib/types";
 import { REQUIRED_HEADERS, SHEET_NAMES, type SheetName } from "@/lib/contracts";
 import { cleanDisplay, normalizePhone } from "@/lib/format";
+import { isStatusOnlyRecord } from "@/lib/status-records";
 import { createHmac } from "node:crypto";
 
 const N8N_CRM_WEBHOOK_URL = (process.env.N8N_CRM_WEBHOOK_URL || "").trim();
@@ -84,7 +85,75 @@ function toSheetMap(raw: Record<string, unknown>): Record<SheetName, SheetRecord
 }
 
 export async function getSnapshot(): Promise<CrmSnapshot> {
-  const raw = await callN8n<Record<string, unknown>>({ action: "snapshot" });
+  const sourceMode = process.env.CRM_READ_SOURCE || "n8n";
+  const readCurrent = () => callN8n<Record<string, unknown>>({ action: "snapshot" });
+  // Explicit, opt-in, preview-only direct Neon reader. No n8n send-capable credentials
+  // are available to the preview; on Neon failure fail closed rather than fabricate a fallback.
+  const previewDirect = process.env.VERCEL_ENV === "preview" &&
+    sourceMode === "neon_shadow" && process.env.CRM_PREVIEW_DIRECT_READ === "1";
+  const raw = previewDirect
+    ? await (async (): Promise<Record<string, unknown>> => {
+        const { getNeonRawSnapshot } = await import("@/lib/neon-snapshot");
+        return getNeonRawSnapshot();
+      })()
+    : await (async (): Promise<Record<string, unknown>> => {
+    if (sourceMode !== "neon" && sourceMode !== "neon_shadow") return readCurrent();
+
+    // Keep the Sheets-backed n8n snapshot authoritative during the migration.
+    const current = await readCurrent();
+    try {
+      const { getNeonRawSnapshot } = await import("@/lib/neon-snapshot");
+      const mirror = await getNeonRawSnapshot();
+      const sheetTypes = [
+        ["orders", "Order ID"],
+        ["conversations", "Conversation ID"],
+        ["messages", "Message ID"],
+        ["confirmationEvents", "Event ID"],
+        ["outbox", "Request ID"],
+      ] as const;
+
+      let parity = true;
+      for (const [name, idKey] of sheetTypes) {
+        const original = Array.isArray(current[name]) ? current[name] as SheetRecord[] : [];
+        const copied = Array.isArray(mirror[name]) ? mirror[name] as SheetRecord[] : [];
+        if (copied.length < original.length) { parity = false; break; }
+        // Compare only stable IDs here; the n8n gateway also transforms media captions.
+        const known = new Set(copied.map((r) => String(r[idKey] || "")).filter(Boolean));
+        if (original.some((r) => r[idKey] && !known.has(String(r[idKey])))) {
+          parity = false;
+          break;
+        }
+      }
+
+      // Don't display stale WooCommerce or inbox status while sync is every 15 minutes.
+      for (const [name, idKey, stateKeys] of [
+        ["orders", "Order ID", ["WooCommerce Status", "WhatsApp Status", "Delivery Status"]],
+        ["conversations", "Conversation ID", ["Status", "Handled By"]],
+      ] as const) {
+        const original = Array.isArray(current[name]) ? current[name] as SheetRecord[] : [];
+        const copied = Array.isArray(mirror[name]) ? mirror[name] as SheetRecord[] : [];
+        const mapped = new Map(copied.map((r) => [String(r[idKey] || ""), r]));
+        for (const record of original) {
+          const counterpart = mapped.get(String(record[idKey] || ""));
+          if (!counterpart || stateKeys.some((key) => String(record[key] || "") !== String(counterpart[key] || ""))) {
+            parity = false;
+            break;
+          }
+        }
+      }
+
+      console.info("Neon shadow consistency:", {
+        parity,
+        liveMessages: Array.isArray(current.messages) ? current.messages.length : null,
+        neonMessages: Array.isArray(mirror.messages) ? mirror.messages.length : null,
+      });
+      if (sourceMode === "neon_shadow" || !parity) return current;
+      return mirror;
+    } catch (error) {
+      console.error("Neon mirror unavailable; preserving n8n:", error instanceof Error ? error.message : "unknown error");
+      return current;
+    }
+  })();
   if (raw.ok === false) {
     throw new Error(String(raw.error || "n8n CRM Gateway returned an error."));
   }
@@ -114,7 +183,8 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
     "Customer Phone": "50259277243",
     "Customer Name": "nena",
   };
-  const messages = sheets[SHEET_NAMES.messages] || [];
+  // Delivery callbacks are tracked separately; keep them in source storage, not in chat views.
+  const messages = (sheets[SHEET_NAMES.messages] || []).filter((m) => !isStatusOnlyRecord(m));
   const existingIndex = messages.findIndex((m) => cleanDisplay(m["WhatsApp WAMID"]) === repairedWamid);
   if (existingIndex >= 0) {
     messages[existingIndex] = { ...messages[existingIndex], ...repairedMessage };
@@ -140,8 +210,17 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
       image: "📷 Imagen recibida", audio: "🎤 Nota de voz",
       video: "🎬 Video recibido", document: "📄 Documento recibido"
     };
-    const sig = N8N_CRM_API_KEY
-      ? createHmac("sha256", N8N_CRM_API_KEY).update(kind + ":" + id + ":" + expiry).digest("hex")
+    // Preview must never receive the original n8n CRM API key: it also permits
+    // send_message. Only sign media links when an independent read-only gateway
+    // has been configured; otherwise media remains safely unavailable.
+    const previewMedia = process.env.VERCEL_ENV === "preview" &&
+      sourceMode === "neon_shadow" && process.env.CRM_PREVIEW_DIRECT_READ === "1";
+    const signingKey = previewMedia
+      ? (process.env.N8N_MEDIA_READ_WEBHOOK_URL && process.env.N8N_MEDIA_READ_KEY
+          ? (process.env.CRM_PREVIEW_SESSION_SECRET || "").trim() : "")
+      : N8N_CRM_API_KEY;
+    const sig = signingKey
+      ? createHmac("sha256", signingKey).update(kind + ":" + id + ":" + expiry).digest("hex")
       : "";
     row["Media Kind"] = kind;
     row["Media ID"] = id;
@@ -167,7 +246,7 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
   const remoteOk = raw.contractOk === undefined ? true : Boolean(raw.contractOk);
 
   return {
-    source: "n8n",
+    source: previewDirect ? "neon" : "n8n",
     syncedAt: String(raw.generatedAt || raw.syncedAt || new Date().toISOString()),
     contractOk: remoteOk && contractWarnings.length === 0,
     contractWarnings,
