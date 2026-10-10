@@ -69,4 +69,4 @@ These are **separate releases**. Do not combine them automatically:
 
 ## Rollout decision at this checkpoint
 
-**NO-GO** until authenticated browser media playback and explicit owner acceptance; backup-only activation additionally requires Gate B. All synthetic QA milestones are documented in `scripts/ARCHIVE_BACKUP_README.md`.
+**NO-GO** pending manual Inbox/Orders/Dashboard/mobile/read-only browser acceptance and explicit owner release approval. Authenticated original image/audio playback is already user-confirmed, and authenticated aggregate Inbox/Orders QA is PASS (46 conversations, 431 filtered messages, 12 orders, 0 duplicates, 0 unlinked, 0 callbacks). All five manual acceptance flags remain false (`overall_acceptance=false`). Backup-only activation additionally requires Gate B and independent approval. QA milestones are documented in `scripts/ARCHIVE_BACKUP_README.md` and `scripts/FINAL_INBOX_ORDERS_QA.md`.
