@@ -101,3 +101,11 @@ Created inactive n8n workflow [Sanureva — Independent S3 Archive Restore QA](h
 The restore was **non-mutating**: no customer messages, orders, media or archive records deleted or updated. The preexisting synthetic QA ledger remains verified, QA `dry_run=true`, and the independent restore worker remains inactive. Main Neon separately still has `dry_run=true`, zero archives and 12 orders.
 
 **Caveats before production rollout:** A true parallel-transaction contention test for the lease claim remains outstanding. QA restored the archive and compared to existing source rows; it did **not** import into a fresh database or demonstrate cross-database disaster recovery. Do not enable archive scheduling or deletion based solely on this test.
+
+## Parallel claim test — 2026-10-10
+
+Created an isolated child branch `qa-archive-parallel-claims-20261010` (`br-summer-pine-b7u1gdc3`) based on QA, not Main. Added a new synthetic `TEST-ARCH-RACE-20261010` conversation with one message. Confined the child branch's claim function to exactly this fixture and `qa/conversations/` object keys. With QA-only `dry_run=false` temporarily, sent **two Postgres claim calls concurrently** using two connector invocations. One returned a new archive reservation; the other returned **zero** rows. A follow-up query showed **one reservation, one distinct archive UUID, one lease token and retry_count=0**. QA `dry_run=true` was then restored successfully.
+
+This verifies duplicate prevention in a two-request concurrent test, **not** a stress test with dozens of database sessions under artificial lock contention. The existing successful independent gzip restore test #38461 and QA E2E #38441 remain intact on the parent QA branch. Main database and original workers were not changed.
+
+Remaining before production release: independent restore import into a clean database (rather than comparison with intact original records); browser visual media QA; production migrations and rollout assessment; explicit user release authorization. Keep automatic archive inactive and both deletion flags disabled.
