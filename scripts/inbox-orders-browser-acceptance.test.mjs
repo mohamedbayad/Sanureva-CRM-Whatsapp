@@ -55,6 +55,20 @@ test("copyable report includes only aggregate counters and booleans", () => {
   assert.match(snippet,/manual_orders_confirmed/);
 });
 
+test("non-200 data-quality responses show diagnostic checks rather than hiding them", () => {
+  assert.match(client, /pageRes\.status !== 409/);
+  assert.match(client, /setReport\(inspectSnapshot\(snapshot, qa\)\)/);
+  assert.match(client, /CHECK — one or more data checks failed/);
+});
+
+test("mobile, disabled sending and unauthenticated security require manual acceptance", () => {
+  assert.match(client, /key: "mobile"/);
+  assert.match(client, /key: "read_only"/);
+  assert.match(client, /manual_mobile_confirmed: manual\.mobile/);
+  assert.match(client, /manual_read_only_security_confirmed: manual\.read_only/);
+  assert.match(client, /unsigned-in request to \/api\/snapshot does not expose data/);
+});
+
 test("sidebar only exposes acceptance page for read-only Preview", () => {
   assert.match(sidebar,/NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1" \? \[\{ href: "\/acceptance-review"/);
 });
