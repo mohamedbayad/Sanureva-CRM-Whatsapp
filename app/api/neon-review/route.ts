@@ -28,7 +28,19 @@ export async function GET(request: NextRequest) {
           coalesce(nullif(message_text, ''), nullif(caption, ''),
             nullif(source_record->>'Message Content Snippet', ''), '') AS preview_text,
           coalesce(delivery_status, '') AS delivery_status,
-          coalesce(whatsapp_wamid, '') AS whatsapp_wamid
+          coalesce(whatsapp_wamid, '') AS whatsapp_wamid,
+          (
+            (conversation_id IS NULL OR btrim(conversation_id) = '')
+            AND (customer_phone IS NULL OR lower(btrim(customer_phone)) = 'unknown' OR btrim(customer_phone) = '')
+            AND nullif(btrim(coalesce(message_text, '')), '') IS NULL
+            AND nullif(btrim(coalesce(caption, '')), '') IS NULL
+            AND nullif(btrim(coalesce(source_record->>'Message Content Snippet', '')), '') IS NULL
+            AND nullif(btrim(coalesce(source_record->>'Message Type', '')), '') IS NULL
+            AND nullif(btrim(coalesce(source_record->>'Direction', '')), '') IS NULL
+            AND nullif(btrim(coalesce(source_record->>'Message ID', '')), '') IS NULL
+            AND nullif(btrim(coalesce(whatsapp_wamid, '')), '') IS NOT NULL
+            AND lower(btrim(coalesce(delivery_status, ''))) IN ('sent', 'delivered', 'read', 'failed')
+          ) AS is_status_only
         FROM public.messages
         WHERE conversation_id IS NULL OR btrim(conversation_id) = ''
         ORDER BY occurred_at DESC, id DESC LIMIT 100
