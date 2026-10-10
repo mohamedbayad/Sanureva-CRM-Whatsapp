@@ -1,6 +1,7 @@
 import type { CrmSnapshot, OutboxPayload, SheetRecord } from "@/lib/types";
 import { REQUIRED_HEADERS, SHEET_NAMES, type SheetName } from "@/lib/contracts";
 import { cleanDisplay, normalizePhone } from "@/lib/format";
+import { isStatusOnlyRecord } from "@/lib/status-records";
 import { createHmac } from "node:crypto";
 
 const N8N_CRM_WEBHOOK_URL = (process.env.N8N_CRM_WEBHOOK_URL || "").trim();
@@ -182,7 +183,8 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
     "Customer Phone": "50259277243",
     "Customer Name": "nena",
   };
-  const messages = sheets[SHEET_NAMES.messages] || [];
+  // Delivery callbacks are tracked separately; keep them in source storage, not in chat views.
+  const messages = (sheets[SHEET_NAMES.messages] || []).filter((m) => !isStatusOnlyRecord(m));
   const existingIndex = messages.findIndex((m) => cleanDisplay(m["WhatsApp WAMID"]) === repairedWamid);
   if (existingIndex >= 0) {
     messages[existingIndex] = { ...messages[existingIndex], ...repairedMessage };
