@@ -13,6 +13,7 @@ on:
       - lib/n8n.ts
       - scripts/archive-lease-gate.test.mjs
       - scripts/media-ui-preview.test.mjs
+      - scripts/media-api-runtime.test.mjs
       - components/MediaBubble.tsx
       - app/inbox/page.tsx
       - app/api/media/route.ts
@@ -42,6 +43,8 @@ jobs:
         run: node --test scripts/archive-lease-gate.test.mjs
       - name: Test native WhatsApp media UI and Preview guardrails
         run: node --test scripts/media-ui-preview.test.mjs
+      - name: Exercise authenticated synthetic media proxy responses
+        run: node --test scripts/media-api-runtime.test.mjs
       - name: Next.js production build
         run: npm run build
       - name: Commit generated lockfile to feature branch
