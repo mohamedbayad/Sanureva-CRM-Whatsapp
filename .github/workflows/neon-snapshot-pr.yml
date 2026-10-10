@@ -15,6 +15,10 @@ on:
       - scripts/media-ui-preview.test.mjs
       - scripts/media-api-runtime.test.mjs
       - scripts/media-browser-review.test.mjs
+      - scripts/inbox-orders-acceptance.test.mjs
+      - app/orders/page.tsx
+      - app/api/outbox/route.ts
+      - lib/status-records.ts
       - app/media-review/page.tsx
       - components/MediaReviewClient.tsx
       - components/Sidebar.tsx
@@ -51,6 +55,8 @@ jobs:
         run: node --test scripts/media-api-runtime.test.mjs
       - name: Verify read-only browser QA and privacy guards
         run: node --test scripts/media-browser-review.test.mjs
+      - name: Verify Inbox, Orders and Preview no-send protections
+        run: node --test scripts/inbox-orders-acceptance.test.mjs
       - name: Next.js production build
         run: npm run build
       - name: Commit generated lockfile to feature branch
