@@ -14,6 +14,7 @@ on:
       - scripts/archive-lease-gate.test.mjs
       - scripts/media-ui-preview.test.mjs
       - scripts/media-api-runtime.test.mjs
+      - scripts/production-mode-compat.test.mjs
       - scripts/media-browser-review.test.mjs
       - scripts/inbox-orders-acceptance.test.mjs
       - scripts/inbox-orders-browser-acceptance.test.mjs
@@ -62,6 +63,8 @@ jobs:
         run: node --test scripts/inbox-orders-acceptance.test.mjs
       - name: Verify protected Inbox and Orders browser acceptance QA
         run: node --test scripts/inbox-orders-browser-acceptance.test.mjs
+      - name: Verify Production n8n and WhatsApp compatibility
+        run: node --test scripts/production-mode-compat.test.mjs
       - name: Next.js production build
         run: npm run build
       - name: Commit generated lockfile to feature branch
