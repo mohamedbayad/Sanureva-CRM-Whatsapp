@@ -35,7 +35,7 @@ test('archive disabled on unsafe policies', () => {
     { allow_message_delete: true },
     { allow_media_delete: true },
     { inactive_days: 14 }
-  ]) assert.throws(() => gate({ ...safe, ...wrong }), /Unsafe archive policy/);
+  ]) assert.throws(() => gate({ ...safe, ...wrong }), /Archive policy unsafe/);
 });
 test('no candidates and no retries produce a safe no-op', () => {
   const r = gate(safe);
