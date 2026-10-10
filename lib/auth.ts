@@ -8,8 +8,8 @@ function credentials() {
   const privatePreview = process.env.VERCEL_ENV === "preview" &&
     process.env.CRM_READ_SOURCE === "neon_shadow";
   return {
-    password: (privatePreview ? process.env.CRM_REVIEW_PASSWORD : process.env.CRM_DASHBOARD_PASSWORD || "").trim(),
-    apiKey: (privatePreview ? process.env.CRM_PREVIEW_SESSION_SECRET : process.env.N8N_CRM_API_KEY || "").trim(),
+    password: (privatePreview ? (process.env.CRM_REVIEW_PASSWORD || "") : (process.env.CRM_DASHBOARD_PASSWORD || "")).trim(),
+    apiKey: (privatePreview ? (process.env.CRM_PREVIEW_SESSION_SECRET || "") : (process.env.N8N_CRM_API_KEY || "")).trim(),
   };
 }
 
