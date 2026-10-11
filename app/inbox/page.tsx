@@ -29,6 +29,12 @@ export default function InboxPage() {
   const [templateId, setTemplateId] = useState("");
   const [templatesError, setTemplatesError] = useState("");
   const [liveStage, setLiveStage] = useState<string>("");
+  const [followupDrafts,setFollowupDrafts]=useState<Array<{job_id:number;topic:string;proposed_text:string|null;review_decision:string;approval_status:string;rationale:string}>>([]);
+  const [selectedDraft,setSelectedDraft]=useState<number|null>(null);
+  const [draftText,setDraftText]=useState("");
+  const [adminKey,setAdminKey]=useState("");
+  const [draftNotice,setDraftNotice]=useState("");
+  const [draftSaving,setDraftSaving]=useState(false);
   useEffect(()=>{ let live=true; fetch("/api/journeys",{cache:"no-store"}).then(r=>r.json()).then(j=>{if(live&&Array.isArray(j.templates))setTemplates(j.templates);else if(live)setTemplatesError("Templates unavailable")}).catch(()=>{if(live)setTemplatesError("Templates unavailable")}); return()=>{live=false}; },[]);
   const applyTemplate=(id:string)=>{setTemplateId(id);const found=templates.find(x=>String(x.id)===id);if(!found)return;if(found.kind==="audio"){setNotice("Audio templates are scripts only. Audio sending is not yet supported by the current n8n sender.");return;}setText(found.content);setNotice("");};
 
@@ -51,7 +57,11 @@ export default function InboxPage() {
   const orderId = cleanDisplay(active?.["Order ID"]) || cleanDisplay(relatedOrder?.["Order ID"]);
   const stage = liveStage || cleanDisplay(active?.["Status"]) || "New lead";
   useEffect(()=>{ if(!phone){return;} let activeRequest=true; setLiveStage(""); fetch("/api/contact-stage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(x=>{if(activeRequest&&x.ok)setLiveStage(x.stage)}).catch(()=>{}); return()=>{activeRequest=false}; },[phone]);
+  useEffect(()=>{if(!phone){setFollowupDrafts([]);return;}let live=true;setFollowupDrafts([]);setSelectedDraft(null);setDraftText("");fetch("/api/followup-drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(j=>{if(live&&j.ok&&Array.isArray(j.drafts))setFollowupDrafts(j.drafts)}).catch(()=>{});return()=>{live=false}},[phone]);
   const delivery = cleanDisplay(relatedOrder?.["Delivery Status"]) || "Not available";
+  const chooseDraft=(id:number)=>{const draft=followupDrafts.find(d=>d.job_id===id);setSelectedDraft(id);setDraftText(draft?.proposed_text||"");setDraftNotice("")};
+  const saveDraft=async()=>{if(!selectedDraft||!draftText.trim())return;setDraftSaving(true);setDraftNotice("");try{const r=await fetch("/api/followup-drafts",{method:"PATCH",headers:{"Content-Type":"application/json","x-template-admin-key":adminKey},body:JSON.stringify({job_id:selectedDraft,proposed_text:draftText})});const j=await r.json();if(!r.ok)throw Error(j.error||"Could not save");setFollowupDrafts(ds=>ds.map(d=>d.job_id===selectedDraft?{...d,proposed_text:draftText,approval_status:"needs_review"}:d));setDraftNotice("Saved as draft. Nothing was sent.")}catch(e){setDraftNotice(e instanceof Error?e.message:"Save failed")}finally{setDraftSaving(false)}};
+
 
   async function send(e: FormEvent) {
     e.preventDefault();
@@ -81,6 +91,12 @@ export default function InboxPage() {
         {active ? <>
           <div className="conversationHead"><div><strong>{cleanDisplay(active["Customer Name"]) || "Customer"}</strong><span>{phone} {orderId ? `· Order #${orderId}` : ""}</span></div><div className="inboxHeadTags"><span className="pill success">{stage}</span><span className="pill subtle"><Package size={12}/>{delivery}</span></div></div>
           <div className="messages">{thread.length ? thread.map((m,i)=>{ const inbound=cleanDisplay(m.Direction).toLowerCase().includes("inbound"); return <div key={`${cleanDisplay(m["Message ID"])}-${i}`} className={inbound?"bubbleRow inbound":"bubbleRow outbound"}><div className="bubble"><MediaBubble message={m} /><small>{cleanDisplay(m["Message Type"])} · {cleanDisplay(m["Delivery Status"])} · {formatDate(m.Timestamp)}</small></div></div> }) : <div className="emptyState">No logged messages for this conversation.</div>}</div>
+          {followupDrafts.length>0&&<section className="inboxDraftPanel">
+            <div className="inboxDraftHeader"><strong>Follow-up drafts · Review only</strong><span>{followupDrafts.length} draft(s)</span></div>
+            <select aria-label="Select a follow-up draft" value={selectedDraft??""} onChange={e=>chooseDraft(Number(e.target.value))}><option value="">Choose suggested follow-up…</option>{followupDrafts.map(d=><option key={d.job_id} value={d.job_id}>#{d.job_id} · {d.topic} · {d.review_decision}</option>)}</select>
+            {selectedDraft!==null&&<div className="inboxDraftEditor"><p>{followupDrafts.find(d=>d.job_id===selectedDraft)?.rationale}</p><textarea aria-label="Edit follow-up draft" value={draftText} onChange={e=>setDraftText(e.target.value)} rows={4} maxLength={2500}/><input type="password" aria-label="Template admin key" autoComplete="off" placeholder="Admin key to save draft" value={adminKey} onChange={e=>setAdminKey(e.target.value)}/><button type="button" disabled={!adminKey||!draftText.trim()||draftSaving||previewReadonly} onClick={saveDraft}>{draftSaving?"Saving…":"Save draft only"}</button>{draftNotice&&<small role="status">{draftNotice}</small>}</div>}
+            <small>Saving a draft never sends a WhatsApp message. Review order status and messaging permission separately.</small>
+          </section>}
           {previewReadonly ? (
             <div className="composer" role="status"><strong>Read-only preview</strong><p>Sending is disabled in preview mode.</p></div>
           ) : <form className="composer" onSubmit={send}>
