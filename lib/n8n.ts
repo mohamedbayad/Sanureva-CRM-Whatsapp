@@ -91,6 +91,9 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
   // are available to the preview; on Neon failure fail closed rather than fabricate a fallback.
   const previewDirect = process.env.VERCEL_ENV === "preview" &&
     sourceMode === "neon_shadow" && process.env.CRM_PREVIEW_DIRECT_READ === "1";
+  // Production uses Neon only when its mirrored records match the n8n source.
+  // Keep existing n8n reads and WhatsApp writes available as a safe fallback.
+  let servingNeon = previewDirect;
   const raw = previewDirect
     ? await (async (): Promise<Record<string, unknown>> => {
         const { getNeonRawSnapshot } = await import("@/lib/neon-snapshot");
@@ -114,8 +117,12 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
 
       let parity = true;
       for (const [name, idKey] of sheetTypes) {
-        const original = Array.isArray(current[name]) ? current[name] as SheetRecord[] : [];
-        const copied = Array.isArray(mirror[name]) ? mirror[name] as SheetRecord[] : [];
+        const sourceRows = Array.isArray(current[name]) ? current[name] as SheetRecord[] : [];
+        const mirrorRows = Array.isArray(mirror[name]) ? mirror[name] as SheetRecord[] : [];
+        // WhatsApp delivery callbacks are raw log records, not chat messages.
+        // Normalize both sides before assessing the 15-minute mirror's parity.
+        const original = name === "messages" ? sourceRows.filter((row) => !isStatusOnlyRecord(row)) : sourceRows;
+        const copied = name === "messages" ? mirrorRows.filter((row) => !isStatusOnlyRecord(row)) : mirrorRows;
         if (copied.length < original.length) { parity = false; break; }
         // Compare only stable IDs here; the n8n gateway also transforms media captions.
         const known = new Set(copied.map((r) => String(r[idKey] || "")).filter(Boolean));
@@ -148,6 +155,7 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
         neonMessages: Array.isArray(mirror.messages) ? mirror.messages.length : null,
       });
       if (sourceMode === "neon_shadow" || !parity) return current;
+      servingNeon = true;
       return mirror;
     } catch (error) {
       console.error("Neon mirror unavailable; preserving n8n:", error instanceof Error ? error.message : "unknown error");
@@ -246,7 +254,7 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
   const remoteOk = raw.contractOk === undefined ? true : Boolean(raw.contractOk);
 
   return {
-    source: previewDirect ? "neon" : "n8n",
+    source: servingNeon ? "neon" : "n8n",
     syncedAt: String(raw.generatedAt || raw.syncedAt || new Date().toISOString()),
     contractOk: remoteOk && contractWarnings.length === 0,
     contractWarnings,
