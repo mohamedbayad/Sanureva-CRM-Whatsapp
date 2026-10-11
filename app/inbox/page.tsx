@@ -34,7 +34,7 @@ export default function InboxPage() {
   const [purchaseKey,setPurchaseKey]=useState("");
   const [purchaseNotice,setPurchaseNotice]=useState("");
   const [purchaseSaving,setPurchaseSaving]=useState(false);
-  const [purchaseReminders,setPurchaseReminders]=useState<Array<{id:number;planned_at:string;status:string}>>([]);
+  const [purchaseReminders,setPurchaseReminders]=useState<Array<{id:number;planned_at:string;status:string;source?:string;local_date?:string;time_precision?:string;needs_review?:boolean;customer_requested_contact?:boolean}>>([]);
   const [followupDrafts,setFollowupDrafts]=useState<Array<{job_id:number;topic:string;proposed_text:string|null;review_decision:string;approval_status:string;rationale:string}>>([]);
   const [selectedDraft,setSelectedDraft]=useState<number|null>(null);
   const [draftText,setDraftText]=useState("");
@@ -110,7 +110,7 @@ export default function InboxPage() {
             <input value={purchaseNotes} maxLength={500} placeholder="Reason or customer agreement (optional)" onChange={e=>setPurchaseNotes(e.target.value)}/>
             <input type="password" autoComplete="off" placeholder="Admin key to save" value={purchaseKey} onChange={e=>setPurchaseKey(e.target.value)}/>
             <button type="button" className="inboxMediaChoice active" disabled={purchaseSaving||!purchaseKey||!purchaseDate||previewReadonly} onClick={savePurchaseReminder}>{purchaseSaving?"Saving…":"Save purchase reminder (draft)"}</button>
-            {purchaseReminders.map(x=><small key={x.id}>#{x.id} · {new Date(x.planned_at).toLocaleString("es-GT",{timeZone:"America/Guatemala"})} · {x.status}</small>)}
+            {purchaseReminders.map(x=><small key={x.id}>#{x.id} · {x.source==="n8n_auto"?"Automatic detection":"Manual entry"} · {x.time_precision==="date_only"?(String(x.local_date||"").slice(0,10)+" · Time not confirmed"):new Date(x.planned_at).toLocaleString("es-GT",{timeZone:"America/Guatemala"})} · {x.status}{x.needs_review?" · Requires review":""}</small>)}
             {purchaseNotice&&<small role="status">{purchaseNotice}</small>}
           </section>
           {followupDrafts.length>0&&<section className="inboxDraftPanel">
