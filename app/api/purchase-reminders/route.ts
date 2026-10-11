@@ -7,8 +7,9 @@ function allowed(r:NextRequest){const k=process.env.CRM_TEMPLATE_ADMIN_KEY||"",v
 export async function POST(r:NextRequest){
  if(!process.env.DATABASE_URL)return NextResponse.json({error:"Database not configured"},{status:503});
  try{const {phone}=await r.json();if(typeof phone!=="string"||!/^\d{8,15}$/.test(phone))return NextResponse.json({error:"Invalid phone"},{status:400});
- const sql=neon(process.env.DATABASE_URL);const rows=await sql`SELECT id,planned_at,timezone,notes,reminder_text,status,source,local_date,time_precision,customer_requested_contact,needs_review FROM crm_purchase_reminders WHERE phone_e164=${phone} ORDER BY planned_at DESC LIMIT 10`;
- return NextResponse.json({ok:true,reminders:rows},{headers})}catch{return NextResponse.json({error:"Could not load reminders"},{status:502})}
+ const sql=neon(process.env.DATABASE_URL);
+ const [rows,clarifications]=await Promise.all([sql`SELECT id,planned_at,timezone,notes,reminder_text,status,source,local_date,time_precision,customer_requested_contact,needs_review FROM crm_purchase_reminders WHERE phone_e164=${phone} ORDER BY planned_at DESC LIMIT 10`,sql`SELECT id,status,reason,created_at FROM crm_purchase_date_clarifications WHERE phone_e164=${phone} ORDER BY created_at DESC LIMIT 10`]);
+ return NextResponse.json({ok:true,reminders:rows,clarifications},{headers})}catch{return NextResponse.json({error:"Could not load reminders"},{status:502})}
 }
 export async function PUT(r:NextRequest){
  if(process.env.VERCEL_ENV==="preview")return NextResponse.json({error:"Read-only preview"},{status:403});
