@@ -252,3 +252,15 @@ tr:last-child td { border-bottom:0; }
 .inboxDraftEditor button{background:#157e5c;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-size:12px;font-weight:700;justify-self:start}
 .inboxDraftEditor button:disabled{opacity:.5;cursor:not-allowed}
 .inboxDraftEditor small{font-size:11px;color:#126f4c}
+
+
+/* Purchase date detected by bot — keep manual form secondary */
+.inboxPurchasePending{background:#fff;border:1px solid #cce5d9;border-radius:11px;padding:11px 13px;color:#1d644b}
+.inboxPurchasePending strong{font-size:12px}
+.inboxPurchasePending p{margin:5px 0 0;color:#647e70;font-size:11px;line-height:1.5}
+.inboxPurchaseManual{border-top:1px solid #dceae2;padding-top:12px;display:grid;gap:10px}
+.inboxPurchaseManual summary{font-weight:650;color:#42745e;font-size:11px;cursor:pointer}
+.inboxPurchaseManual[open]{display:grid}
+.inboxPurchaseManual p{font-size:11px;color:#647e70;margin:5px 0}
+.inboxPurchaseManual label{font-size:11px;display:grid;gap:6px}
+.inboxPurchaseManual input{width:100%;background:#fff;border:1px solid #d6e5dc;border-radius:8px;padding:10px;font-size:12px;min-width:0}
