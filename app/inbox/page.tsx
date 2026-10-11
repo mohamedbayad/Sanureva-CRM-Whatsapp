@@ -29,6 +29,12 @@ export default function InboxPage() {
   const [templateId, setTemplateId] = useState("");
   const [templatesError, setTemplatesError] = useState("");
   const [liveStage, setLiveStage] = useState<string>("");
+  const [purchaseDate,setPurchaseDate]=useState("");
+  const [purchaseNotes,setPurchaseNotes]=useState("");
+  const [purchaseKey,setPurchaseKey]=useState("");
+  const [purchaseNotice,setPurchaseNotice]=useState("");
+  const [purchaseSaving,setPurchaseSaving]=useState(false);
+  const [purchaseReminders,setPurchaseReminders]=useState<Array<{id:number;planned_at:string;status:string}>>([]);
   const [followupDrafts,setFollowupDrafts]=useState<Array<{job_id:number;topic:string;proposed_text:string|null;review_decision:string;approval_status:string;rationale:string}>>([]);
   const [selectedDraft,setSelectedDraft]=useState<number|null>(null);
   const [draftText,setDraftText]=useState("");
@@ -58,6 +64,12 @@ export default function InboxPage() {
   const stage = liveStage || cleanDisplay(active?.["Status"]) || "New lead";
   useEffect(()=>{ if(!phone){return;} let activeRequest=true; setLiveStage(""); fetch("/api/contact-stage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(x=>{if(activeRequest&&x.ok)setLiveStage(x.stage)}).catch(()=>{}); return()=>{activeRequest=false}; },[phone]);
   useEffect(()=>{if(!phone){setFollowupDrafts([]);return;}let live=true;setFollowupDrafts([]);setSelectedDraft(null);setDraftText("");fetch("/api/followup-drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(j=>{if(live&&j.ok&&Array.isArray(j.drafts))setFollowupDrafts(j.drafts)}).catch(()=>{});return()=>{live=false}},[phone]);
+  useEffect(()=>{if(!phone){setPurchaseReminders([]);return;}let live=true;setPurchaseReminders([]);setPurchaseNotice("");fetch("/api/purchase-reminders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(j=>{if(live&&j.ok)setPurchaseReminders(j.reminders||[])}).catch(()=>{});return()=>{live=false}},[phone]);
+  const savePurchaseReminder=async()=>{if(!phone||!purchaseDate)return;setPurchaseSaving(true);setPurchaseNotice("");try{
+    const planned_at=purchaseDate+":00-06:00";
+    const reminder_text="¡Hola! 😊 Como quedamos, te escribimos de Sanureva para retomar tu pedido. ¿Te viene bien que continuemos ahora? Con gusto te ayudo.";
+    const r=await fetch("/api/purchase-reminders",{method:"PUT",headers:{"Content-Type":"application/json","x-template-admin-key":purchaseKey},body:JSON.stringify({phone,planned_at,notes:purchaseNotes,reminder_text})});const j=await r.json();if(!r.ok)throw Error(j.error||"Save failed");setPurchaseNotice("Reminder saved as DRAFT. No message sent.");setPurchaseReminders(x=>[{...j.reminder},...x]);setLiveStage("scheduled_purchase");
+  }catch(e){setPurchaseNotice(e instanceof Error?e.message:"Save failed")}finally{setPurchaseSaving(false)}};
   const delivery = cleanDisplay(relatedOrder?.["Delivery Status"]) || "Not available";
   const chooseDraft=(id:number)=>{const draft=followupDrafts.find(d=>Number(d.job_id)===id);setSelectedDraft(id);setDraftText(draft?.proposed_text||"");setDraftNotice("")};
   const saveDraft=async()=>{if(!selectedDraft||!draftText.trim())return;setDraftSaving(true);setDraftNotice("");try{const r=await fetch("/api/followup-drafts",{method:"PATCH",headers:{"Content-Type":"application/json","x-template-admin-key":adminKey},body:JSON.stringify({job_id:selectedDraft,proposed_text:draftText})});const j=await r.json();if(!r.ok)throw Error(j.error||"Could not save");setFollowupDrafts(ds=>ds.map(d=>Number(d.job_id)===selectedDraft?{...d,proposed_text:draftText,approval_status:"needs_review"}:d));setDraftNotice("Saved as draft. Nothing was sent.")}catch(e){setDraftNotice(e instanceof Error?e.message:"Save failed")}finally{setDraftSaving(false)}};
@@ -91,6 +103,16 @@ export default function InboxPage() {
         {active ? <>
           <div className="conversationHead"><div><strong>{cleanDisplay(active["Customer Name"]) || "Customer"}</strong><span>{phone} {orderId ? `· Order #${orderId}` : ""}</span></div><div className="inboxHeadTags"><span className="pill success">{stage}</span><span className="pill subtle"><Package size={12}/>{delivery}</span></div></div>
           <div className="messages">{thread.length ? thread.map((m,i)=>{ const inbound=cleanDisplay(m.Direction).toLowerCase().includes("inbound"); return <div key={`${cleanDisplay(m["Message ID"])}-${i}`} className={inbound?"bubbleRow inbound":"bubbleRow outbound"}><div className="bubble"><MediaBubble message={m} /><small>{cleanDisplay(m["Message Type"])} · {cleanDisplay(m["Delivery Status"])} · {formatDate(m.Timestamp)}</small></div></div> }) : <div className="emptyState">No logged messages for this conversation.</div>}</div>
+          <section className="inboxDraftPanel">
+            <div className="inboxDraftHeader"><strong>Scheduled Purchase · Record a follow-up date</strong><span>Draft only</span></div>
+            <p style={{fontSize:11,margin:0,color:"#627768"}}>Customer asked to buy later? Choose their agreed date and time in Guatemala. Nothing is sent automatically.</p>
+            <label style={{fontSize:11}}>Guatemala date &amp; time <input type="datetime-local" aria-label="Purchase reminder date in Guatemala" value={purchaseDate} onChange={e=>setPurchaseDate(e.target.value)}/></label>
+            <input value={purchaseNotes} maxLength={500} placeholder="Reason or customer agreement (optional)" onChange={e=>setPurchaseNotes(e.target.value)}/>
+            <input type="password" autoComplete="off" placeholder="Admin key to save" value={purchaseKey} onChange={e=>setPurchaseKey(e.target.value)}/>
+            <button type="button" className="inboxMediaChoice active" disabled={purchaseSaving||!purchaseKey||!purchaseDate||previewReadonly} onClick={savePurchaseReminder}>{purchaseSaving?"Saving…":"Save purchase reminder (draft)"}</button>
+            {purchaseReminders.map(x=><small key={x.id}>#{x.id} · {new Date(x.planned_at).toLocaleString("es-GT",{timeZone:"America/Guatemala"})} · {x.status}</small>)}
+            {purchaseNotice&&<small role="status">{purchaseNotice}</small>}
+          </section>
           {followupDrafts.length>0&&<section className="inboxDraftPanel">
             <div className="inboxDraftHeader"><strong>Follow-up drafts · Review only</strong><span>{followupDrafts.length} draft(s)</span></div>
             <select aria-label="Select a follow-up draft" value={selectedDraft??""} onChange={e=>chooseDraft(Number(e.target.value))}><option value="">Choose suggested follow-up…</option>{followupDrafts.map(d=><option key={d.job_id} value={d.job_id}>#{d.job_id} · {d.topic} · {d.review_decision}</option>)}</select>
