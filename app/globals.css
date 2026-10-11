@@ -219,3 +219,23 @@ tr:last-child td { border-bottom:0; }
 .crmLoginCard button { background:var(--accent); color:white; border:none; border-radius:10px; padding:12px; font-size:13px; font-weight:750; }
 .crmLoginCard button:disabled { opacity:.6; }
 .crmLoginError { font-size:12px; color:var(--red); }
+
+
+/* Integrated Inbox workspace */
+.inboxComposerHeading{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
+.inboxComposerHeading span{font-size:12px;font-weight:750;display:flex;align-items:center;gap:7px;color:#192b37}
+.inboxComposerHeading small,.inboxComposerFooter small{font-size:10px;color:#81909f}
+.inboxTemplateRow{margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.inboxTemplateSelect{flex:1;min-width:0;border:1px solid #dce7e3;background:#f7fbf9;border-radius:11px;display:flex;align-items:center;gap:8px;padding:0 10px;color:#139369}
+.inboxTemplateSelect select{flex:1;width:100%;background:transparent;border:0;padding:11px 2px;outline:0;color:#203449;font-size:12px;min-width:0;appearance:none}
+.inboxMediaChoices{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.inboxMediaChoice{background:#f8fafc;border:1px solid #e3eaf0;color:#596d80;border-radius:9px;padding:8px 12px;display:flex;align-items:center;gap:7px;font-weight:650;font-size:11px}
+.inboxMediaChoice.active{background:#e7f8f0;border-color:#73cba6;color:#087e55}
+.inboxAudioHint{color:#8793a3;font-size:10px;margin-left:auto}
+.inboxHeadTags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.inboxAttachmentFields{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.inboxAttachmentFields label{flex:1;min-width:180px;display:flex;gap:8px;align-items:center;border:1px solid #dce6ed;padding:8px;border-radius:10px;color:#718096}
+.inboxAttachmentFields input{border:0;outline:0;min-width:0;flex:1;font-size:12px}
+.inboxAttachmentFields>input{border:1px solid #dce6ed;border-radius:10px;padding:9px}
+.inboxComposerFooter{margin-top:7px;line-height:1.45}
+@media(max-width:900px){.inboxComposerHeading{align-items:flex-start;flex-direction:column}.inboxAudioHint{width:100%}}
