@@ -28,6 +28,7 @@ export default function InboxPage() {
   const [templates, setTemplates] = useState<Array<{id:number;name:string;kind:string;content:string;stage:string|null;language:string}>>([]);
   const [templateId, setTemplateId] = useState("");
   const [templatesError, setTemplatesError] = useState("");
+  const [liveStage, setLiveStage] = useState<string>("");
   useEffect(()=>{ let live=true; fetch("/api/journeys",{cache:"no-store"}).then(r=>r.json()).then(j=>{if(live&&Array.isArray(j.templates))setTemplates(j.templates);else if(live)setTemplatesError("Templates unavailable")}).catch(()=>{if(live)setTemplatesError("Templates unavailable")}); return()=>{live=false}; },[]);
   const applyTemplate=(id:string)=>{setTemplateId(id);const found=templates.find(x=>String(x.id)===id);if(!found)return;if(found.kind==="audio"){setNotice("Audio templates are scripts only. Audio sending is not yet supported by the current n8n sender.");return;}setText(found.content);setNotice("");};
 
@@ -48,7 +49,8 @@ export default function InboxPage() {
   const phone = normalizePhone(active?.["Customer Phone"]);
   const relatedOrder = orders.find((o)=>normalizePhone(o["Phone Number"])===phone);
   const orderId = cleanDisplay(active?.["Order ID"]) || cleanDisplay(relatedOrder?.["Order ID"]);
-  const stage = cleanDisplay(active?.["Status"]) || "New lead";
+  const stage = liveStage || cleanDisplay(active?.["Status"]) || "New lead";
+  useEffect(()=>{ if(!phone){return;} let activeRequest=true; setLiveStage(""); fetch("/api/contact-stage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(x=>{if(activeRequest&&x.ok)setLiveStage(x.stage)}).catch(()=>{}); return()=>{activeRequest=false}; },[phone]);
   const delivery = cleanDisplay(relatedOrder?.["Delivery Status"]) || "Not available";
 
   async function send(e: FormEvent) {
