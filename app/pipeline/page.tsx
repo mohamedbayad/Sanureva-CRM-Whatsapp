@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import "./pipeline.css";
 import Link from "next/link";
 import { ArrowRight, AudioLines, Check, Copy, Filter, MessageSquareText, Search, ShieldAlert } from "lucide-react";
 import { useCrm } from "@/components/use-crm";
