@@ -35,6 +35,7 @@ export default function InboxPage() {
   const [purchaseNotice,setPurchaseNotice]=useState("");
   const [purchaseSaving,setPurchaseSaving]=useState(false);
   const [purchaseReminders,setPurchaseReminders]=useState<Array<{id:number;planned_at:string;status:string;source?:string;local_date?:string;time_precision?:string;needs_review?:boolean;customer_requested_contact?:boolean}>>([]);
+  const [purchaseClarifications,setPurchaseClarifications]=useState<Array<{id:number;status:string;reason:string;created_at:string}>>([]);
   const [followupDrafts,setFollowupDrafts]=useState<Array<{job_id:number;topic:string;proposed_text:string|null;review_decision:string;approval_status:string;rationale:string}>>([]);
   const [selectedDraft,setSelectedDraft]=useState<number|null>(null);
   const [draftText,setDraftText]=useState("");
@@ -64,7 +65,7 @@ export default function InboxPage() {
   const stage = liveStage || cleanDisplay(active?.["Status"]) || "New lead";
   useEffect(()=>{ if(!phone){return;} let activeRequest=true; setLiveStage(""); fetch("/api/contact-stage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(x=>{if(activeRequest&&x.ok)setLiveStage(x.stage)}).catch(()=>{}); return()=>{activeRequest=false}; },[phone]);
   useEffect(()=>{if(!phone){setFollowupDrafts([]);return;}let live=true;setFollowupDrafts([]);setSelectedDraft(null);setDraftText("");fetch("/api/followup-drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(j=>{if(live&&j.ok&&Array.isArray(j.drafts))setFollowupDrafts(j.drafts)}).catch(()=>{});return()=>{live=false}},[phone]);
-  useEffect(()=>{if(!phone){setPurchaseReminders([]);return;}let live=true;setPurchaseReminders([]);setPurchaseNotice("");fetch("/api/purchase-reminders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(j=>{if(live&&j.ok)setPurchaseReminders(j.reminders||[])}).catch(()=>{});return()=>{live=false}},[phone]);
+  useEffect(()=>{if(!phone){setPurchaseReminders([]);setPurchaseClarifications([]);return;}let live=true;setPurchaseReminders([]);setPurchaseClarifications([]);setPurchaseNotice("");fetch("/api/purchase-reminders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(j=>{if(live&&j.ok){setPurchaseReminders(j.reminders||[]);setPurchaseClarifications(j.clarifications||[])}}).catch(()=>{});return()=>{live=false}},[phone]);
   const savePurchaseReminder=async()=>{if(!phone||!purchaseDate)return;setPurchaseSaving(true);setPurchaseNotice("");try{
     const planned_at=purchaseDate+":00-06:00";
     const reminder_text="¡Hola! 😊 Como quedamos, te escribimos de Sanureva para retomar tu pedido. ¿Te viene bien que continuemos ahora? Con gusto te ayudo.";
@@ -103,15 +104,19 @@ export default function InboxPage() {
         {active ? <>
           <div className="conversationHead"><div><strong>{cleanDisplay(active["Customer Name"]) || "Customer"}</strong><span>{phone} {orderId ? `· Order #${orderId}` : ""}</span></div><div className="inboxHeadTags"><span className="pill success">{stage}</span><span className="pill subtle"><Package size={12}/>{delivery}</span></div></div>
           <div className="messages">{thread.length ? thread.map((m,i)=>{ const inbound=cleanDisplay(m.Direction).toLowerCase().includes("inbound"); return <div key={`${cleanDisplay(m["Message ID"])}-${i}`} className={inbound?"bubbleRow inbound":"bubbleRow outbound"}><div className="bubble"><MediaBubble message={m} /><small>{cleanDisplay(m["Message Type"])} · {cleanDisplay(m["Delivery Status"])} · {formatDate(m.Timestamp)}</small></div></div> }) : <div className="emptyState">No logged messages for this conversation.</div>}</div>
-          <section className="inboxDraftPanel">
-            <div className="inboxDraftHeader"><strong>Scheduled Purchase · Record a follow-up date</strong><span>Draft only</span></div>
-            <p style={{fontSize:11,margin:0,color:"#627768"}}>Customer asked to buy later? Choose their agreed date and time in Guatemala. Nothing is sent automatically.</p>
-            <label style={{fontSize:11}}>Guatemala date &amp; time <input type="datetime-local" aria-label="Purchase reminder date in Guatemala" value={purchaseDate} onChange={e=>setPurchaseDate(e.target.value)}/></label>
-            <input value={purchaseNotes} maxLength={500} placeholder="Reason or customer agreement (optional)" onChange={e=>setPurchaseNotes(e.target.value)}/>
-            <input type="password" autoComplete="off" placeholder="Admin key to save" value={purchaseKey} onChange={e=>setPurchaseKey(e.target.value)}/>
-            <button type="button" className="inboxMediaChoice active" disabled={purchaseSaving||!purchaseKey||!purchaseDate||previewReadonly} onClick={savePurchaseReminder}>{purchaseSaving?"Saving…":"Save purchase reminder (draft)"}</button>
-            {purchaseReminders.map(x=><small key={x.id}>#{x.id} · {x.source==="n8n_auto"?"Automatic detection":"Manual entry"} · {x.time_precision==="date_only"?(String(x.local_date||"").slice(0,10)+" · Time not confirmed"):new Date(x.planned_at).toLocaleString("es-GT",{timeZone:"America/Guatemala"})} · {x.status}{x.needs_review?" · Requires review":""}</small>)}
-            {purchaseNotice&&<small role="status">{purchaseNotice}</small>}
+          <section className="inboxDraftPanel" aria-label="Purchase follow-up status">
+            <div className="inboxDraftHeader"><strong>Purchase follow-ups</strong><span>Automatic tracking · Draft only</span></div>
+            {purchaseClarifications.some(x=>x.status==="awaiting_day")&&<div className="inboxPurchasePending"><strong>Awaiting purchase date</strong><p>Customer mentioned buying later but did not confirm a specific day. Ask which day suits them; do not schedule a message yet.</p></div>}
+            {purchaseReminders.filter(x=>x.status==="draft").map(x=><div className="inboxPurchasePending" key={x.id}><strong>{x.source==="n8n_auto"?"Automatically detected reminder":"Scheduled reminder"} · Draft #{x.id}</strong><p>{x.time_precision==="date_only"?String(x.local_date||"").slice(0,10)+" · Hour not agreed":new Date(x.planned_at).toLocaleString("es-GT",{dateStyle:"medium",timeStyle:"short",timeZone:"America/Guatemala"})} · Guatemala{ x.needs_review?" · Pending review":""}</p></div>)}
+            {!purchaseClarifications.some(x=>x.status==="awaiting_day")&&!purchaseReminders.some(x=>x.status==="draft")&&<small>No future purchase date detected for this customer.</small>}
+            <details className="inboxPurchaseManual"><summary>Manual override — record agreed purchase date</summary>
+              <p>Only use when the customer agreed on the day and time. Date/time in Guatemala. Saving makes a draft, not an automatic send.</p>
+              <label>Guatemala date &amp; time<input type="datetime-local" aria-label="Purchase reminder date in Guatemala" value={purchaseDate} onChange={e=>setPurchaseDate(e.target.value)}/></label>
+              <input value={purchaseNotes} maxLength={500} placeholder="Customer agreement (optional)" onChange={e=>setPurchaseNotes(e.target.value)}/>
+              <input type="password" autoComplete="off" placeholder="Admin key to save manual reminder" value={purchaseKey} onChange={e=>setPurchaseKey(e.target.value)}/>
+              <button type="button" className="inboxMediaChoice active" disabled={purchaseSaving||!purchaseKey||!purchaseDate||previewReadonly} onClick={savePurchaseReminder}>{purchaseSaving?"Saving…":"Save manual reminder (draft)"}</button>
+              {purchaseNotice&&<small role="status">{purchaseNotice}</small>}
+            </details>
           </section>
           {followupDrafts.length>0&&<section className="inboxDraftPanel">
             <div className="inboxDraftHeader"><strong>Follow-up drafts · Review only</strong><span>{followupDrafts.length} draft(s)</span></div>
