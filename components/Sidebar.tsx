@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart3, GitBranch, Inbox, LayoutDashboard, ListChecks, MessageSquareText, Send, ShoppingBag, ShieldCheck } from "lucide-react";
+import { Activity, BarChart3, GitBranch, FilePenLine, Inbox, LayoutDashboard, ListChecks, MessageSquareText, Send, ShoppingBag, ShieldCheck } from "lucide-react";
 
 const items = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -12,6 +12,7 @@ const items = [
   ...(process.env.NEXT_PUBLIC_ENABLE_INBOX_REVIEW === "1" ? [{ href: "/inbox-review", label: "Inbox Review", icon: ListChecks }] : []),
   { href: "/orders", label: "Orders", icon: ShoppingBag },
   { href: "/journeys", label: "Customer Journeys", icon: GitBranch },
+  { href: "/templates", label: "Message Templates", icon: FilePenLine },
   ...(process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY === "1"
     ? []
     : [
