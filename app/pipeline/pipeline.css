@@ -1,0 +1,40 @@
+.pipelineStageStrip{display:flex;gap:7px;overflow:auto;padding-bottom:12px;margin-bottom:14px;scrollbar-width:thin}
+.pipelineStageStrip button{white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:9px 12px;background:#fff;color:#526177;font-size:11px;font-weight:650}
+.pipelineStageStrip button b{background:#edf3f7;padding:3px 6px;margin-left:4px;border-radius:12px}
+.pipelineStageStrip button.selected{border-color:#9bdfc4;background:var(--accent-soft);color:var(--accent-strong)}
+.pipelineLayout{display:grid;grid-template-columns:minmax(265px,335px) minmax(0,1fr);min-height:640px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow)}
+.pipelineContactPanel{border-right:1px solid var(--line);min-width:0;display:flex;flex-direction:column}
+.pipelineContactPanel .chatSearch{width:auto;margin:16px}
+.pipelineContactList{overflow:auto;max-height:670px}
+.pipelineLead{display:block;width:100%;text-align:left;background:#fff;border:0;border-bottom:1px solid var(--line);padding:14px 16px;color:var(--text)}
+.pipelineLead:hover{background:#f8fcfa}
+.pipelineLeadActive{background:#eefaf4;border-left:3px solid var(--accent);padding-left:13px}
+.pipelineLeadHeading,.pipelineLeadMeta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+.pipelineLeadHeading strong{max-width:58%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.pipelineLeadHeading small,.pipelineLeadMeta small,.pipelineLeadMeta>span:first-child{color:var(--muted);font-size:10px}
+.pipelineLeadMeta{margin-bottom:0}.pipelineLeadMeta .status{font-size:9px;white-space:normal}
+.pipelineAlert{font-size:10px;color:#b56e09}
+.pipelineDetail{padding:24px;min-width:0}
+.pipelineDetailHeading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px}
+.pipelineDetailHeading h2{margin:0;font-size:19px}.pipelineDetailHeading p{margin:7px 0 0;font-size:12px;color:var(--muted)}
+.pipelineFactGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pipelineFactGrid>div{padding:14px;border:1px solid var(--line);border-radius:12px;background:#fbfcfe;min-width:0}
+.pipelineFactGrid span,.pipelineFactGrid strong{display:block}.pipelineFactGrid span{font-size:10px;color:var(--muted);margin-bottom:6px}
+.pipelineFactGrid strong{font-size:12px;overflow-wrap:anywhere}
+.pipelineEvidence{background:#f5f8fc;border-left:3px solid #96add1;padding:13px 15px;margin:19px 0;border-radius:6px 12px 12px 6px}
+.pipelineEvidence strong{font-size:12px}.pipelineEvidence p{margin:6px 0 0;color:#6f7f93;font-size:11px;line-height:1.5}
+.pipelineSectionTitle{display:flex;align-items:center;gap:8px;font-size:14px;margin:24px 0 6px}
+.pipelineHint{font-size:11px;color:var(--muted);line-height:1.55}
+.pipelineFieldLabel{display:block;font-size:11px;font-weight:700;margin:17px 0 7px}
+.pipelineSelect{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px;font-size:12px;color:var(--text)}
+.pipelineTemplate{margin-top:12px;border:1px solid var(--line);border-radius:13px;padding:16px;background:#fbfcff}
+.pipelineTemplateTop{display:flex;align-items:center;gap:7px;color:#5e7089;font-size:11px;font-weight:700;margin-bottom:12px}
+.pipelineTemplateTop span{margin-left:auto;color:var(--muted)}
+.pipelineTemplate textarea{width:100%;border:1px solid #dde5f0;border-radius:10px;padding:12px;font-size:13px;line-height:1.6;color:var(--text);background:#fff;resize:vertical}
+.pipelineTemplate p{font-size:10.5px;color:var(--muted);line-height:1.5}
+.pipelineCopy{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:white;border:0;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700}
+.pipelineActions{display:flex;justify-content:flex-end;padding:18px 0 0}
+.pipelineActions a{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--accent-strong);font-weight:700}
+@media(max-width:1000px){.pipelineFactGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:750px){.pipelineLayout{grid-template-columns:1fr}.pipelineContactPanel{border-right:0;border-bottom:1px solid var(--line)}.pipelineContactList{max-height:300px}.pipelineDetail{padding:18px}.pipelineFactGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:450px){.pipelineFactGrid{grid-template-columns:1fr}}
