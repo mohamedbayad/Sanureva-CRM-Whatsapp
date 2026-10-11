@@ -7,7 +7,7 @@ function allowed(r:NextRequest){const k=process.env.CRM_TEMPLATE_ADMIN_KEY||"",v
 export async function POST(r:NextRequest){
  if(!process.env.DATABASE_URL)return NextResponse.json({error:"Database not configured"},{status:503});
  try{const {phone}=await r.json();if(typeof phone!=="string"||!/^\d{8,15}$/.test(phone))return NextResponse.json({error:"Invalid phone"},{status:400});
- const sql=neon(process.env.DATABASE_URL);const rows=await sql`SELECT id,planned_at,timezone,notes,reminder_text,status FROM crm_purchase_reminders WHERE phone_e164=${phone} ORDER BY planned_at DESC LIMIT 10`;
+ const sql=neon(process.env.DATABASE_URL);const rows=await sql`SELECT id,planned_at,timezone,notes,reminder_text,status,source,local_date,time_precision,customer_requested_contact,needs_review FROM crm_purchase_reminders WHERE phone_e164=${phone} ORDER BY planned_at DESC LIMIT 10`;
  return NextResponse.json({ok:true,reminders:rows},{headers})}catch{return NextResponse.json({error:"Could not load reminders"},{status:502})}
 }
 export async function PUT(r:NextRequest){
