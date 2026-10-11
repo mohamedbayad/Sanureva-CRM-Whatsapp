@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
-import { Paperclip, Search, SendHorizontal } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Paperclip, Search, SendHorizontal, FileText, Image as ImageIcon, Video, MessageSquareText, Package, ChevronDown } from "lucide-react";
 import { useCrm } from "@/components/use-crm";
 import { PageHeader } from "@/components/PageHeader";
 import { Loading } from "@/components/Loading";
@@ -25,6 +25,11 @@ export default function InboxPage() {
   const [fileName, setFileName] = useState("");
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState("");
+  const [templates, setTemplates] = useState<Array<{id:number;name:string;kind:string;content:string;stage:string|null;language:string}>>([]);
+  const [templateId, setTemplateId] = useState("");
+  const [templatesError, setTemplatesError] = useState("");
+  useEffect(()=>{ let live=true; fetch("/api/journeys",{cache:"no-store"}).then(r=>r.json()).then(j=>{if(live&&Array.isArray(j.templates))setTemplates(j.templates);else if(live)setTemplatesError("Templates unavailable")}).catch(()=>{if(live)setTemplatesError("Templates unavailable")}); return()=>{live=false}; },[]);
+  const applyTemplate=(id:string)=>{setTemplateId(id);const found=templates.find(x=>String(x.id)===id);if(!found)return;if(found.kind==="audio"){setNotice("Audio templates are scripts only. Audio sending is not yet supported by the current n8n sender.");return;}setText(found.content);setNotice("");};
 
   const conversations = data?.sheets[SHEET_NAMES.conversations] || [];
   const messages = data?.sheets[SHEET_NAMES.messages] || [];
@@ -41,7 +46,10 @@ export default function InboxPage() {
   const active = conversations.find((c)=>cleanDisplay(c["Conversation ID"])===activeId);
   const thread = useMemo(()=>byLatest(messages, activeId), [messages, activeId]);
   const phone = normalizePhone(active?.["Customer Phone"]);
-  const orderId = cleanDisplay(active?.["Order ID"]) || cleanDisplay(orders.find((o)=>normalizePhone(o["Phone Number"])===phone)?.["Order ID"]);
+  const relatedOrder = orders.find((o)=>normalizePhone(o["Phone Number"])===phone);
+  const orderId = cleanDisplay(active?.["Order ID"]) || cleanDisplay(relatedOrder?.["Order ID"]);
+  const stage = cleanDisplay(active?.["Status"]) || "New lead";
+  const delivery = cleanDisplay(relatedOrder?.["Delivery Status"]) || "Not available";
 
   async function send(e: FormEvent) {
     e.preventDefault();
@@ -52,7 +60,7 @@ export default function InboxPage() {
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || "Could not queue message");
       setNotice(`Queued as ${json.requestId || json.request_id || "request"}. n8n accepted the message.`);
-      setText(""); setMediaUrl(""); setFileName("");
+      setText(""); setMediaUrl(""); setFileName(""); setTemplateId("");
       window.setTimeout(refresh, 1200);
     } catch (e) { setNotice(e instanceof Error ? e.message : "Send failed"); }
     finally { setSending(false); }
@@ -69,14 +77,27 @@ export default function InboxPage() {
       </aside>
       <div className="conversation">
         {active ? <>
-          <div className="conversationHead"><div><strong>{cleanDisplay(active["Customer Name"]) || "Customer"}</strong><span>{phone} {orderId ? `· Order #${orderId}` : ""}</span></div><span className="pill subtle">{cleanDisplay(active["Intent / Topic"]) || "WhatsApp"}</span></div>
+          <div className="conversationHead"><div><strong>{cleanDisplay(active["Customer Name"]) || "Customer"}</strong><span>{phone} {orderId ? `· Order #${orderId}` : ""}</span></div><div className="inboxHeadTags"><span className="pill success">{stage}</span><span className="pill subtle"><Package size={12}/>{delivery}</span></div></div>
           <div className="messages">{thread.length ? thread.map((m,i)=>{ const inbound=cleanDisplay(m.Direction).toLowerCase().includes("inbound"); return <div key={`${cleanDisplay(m["Message ID"])}-${i}`} className={inbound?"bubbleRow inbound":"bubbleRow outbound"}><div className="bubble"><MediaBubble message={m} /><small>{cleanDisplay(m["Message Type"])} · {cleanDisplay(m["Delivery Status"])} · {formatDate(m.Timestamp)}</small></div></div> }) : <div className="emptyState">No logged messages for this conversation.</div>}</div>
           {previewReadonly ? (
-            <div className="composer" role="status"><strong>Read-only preview</strong><p>No WhatsApp messages can be sent from this environment. Original images and voice notes appear when available via the protected, read-only media gateway.</p></div>
+            <div className="composer" role="status"><strong>Read-only preview</strong><p>Sending is disabled in preview mode.</p></div>
           ) : <form className="composer" onSubmit={send}>
-            <div className="composeTop"><select value={type} onChange={(e)=>setType(e.target.value as OutboxPayload["type"])}><option>Text</option><option>Image</option><option>PDF</option><option>Video</option></select>{type!=="Text" && <><div className="fieldInline"><Paperclip size={15}/><input value={mediaUrl} onChange={(e)=>setMediaUrl(e.target.value)} placeholder="Public media URL"/></div>{type==="PDF" && <input className="fileName" value={fileName} onChange={(e)=>setFileName(e.target.value)} placeholder="file.pdf"/>}</>}</div>
-            <div className="composeMain"><textarea value={text} onChange={(e)=>setText(e.target.value)} placeholder={type==="Text"?"Type a manual WhatsApp reply…":"Caption / message (optional)"}/><button disabled={sending || !data} title="Send through n8n"><SendHorizontal size={18}/>{sending?"Queueing…":"Queue"}</button></div>
-            {notice && <div className="composeNotice">{notice}</div>}
+            <div className="inboxComposerHeading"><span><MessageSquareText size={16}/> Reply to {cleanDisplay(active["Customer Name"]) || "customer"}</span><small>Manual send via existing n8n Outbox</small></div>
+            <div className="inboxTemplateRow">
+              <label className="inboxTemplateSelect"><FileText size={17}/><select aria-label="Choose message template" value={templateId} onChange={e=>applyTemplate(e.target.value)}>
+                <option value="">Choose a message template…</option>
+                {templates.map(t=><option key={t.id} value={t.id}>{t.name} · {t.language}{t.kind==="audio"?" (audio script only)":""}</option>)}
+              </select><ChevronDown size={15}/></label>
+              {templatesError&&<small>{templatesError}</small>}
+            </div>
+            <div className="inboxMediaChoices">
+              {([["Text",MessageSquareText],["Image",ImageIcon],["PDF",FileText],["Video",Video]] as const).map(([value,Icon])=><button type="button" key={value} className={type===value?"inboxMediaChoice active":"inboxMediaChoice"} onClick={()=>{setType(value);setNotice("")}}><Icon size={15}/>{value}</button>)}
+              <span className="inboxAudioHint">Audio: sender integration pending</span>
+            </div>
+            {type!=="Text"&&<div className="inboxAttachmentFields"><label><Paperclip size={16}/><input aria-label="Media URL" type="url" required placeholder={type==="PDF"?"Paste public PDF URL":"Paste public "+type.toLowerCase()+" URL"} value={mediaUrl} onChange={e=>setMediaUrl(e.target.value)}/></label>{type==="PDF"&&<input aria-label="Document filename" value={fileName} placeholder="document.pdf" onChange={e=>setFileName(e.target.value)}/>}</div>}
+            <div className="composeMain"><textarea value={text} onChange={e=>setText(e.target.value)} placeholder={type==="Text"?"Write a message or select a template…":"Caption (optional)"} /><button disabled={sending || !data || (type==="Text"?!text.trim():!mediaUrl.trim())} title="Queue through n8n"><SendHorizontal size={18}/>{sending?"Queueing…":"Send"}</button></div>
+            <div className="inboxComposerFooter"><small>One attachment per message. Public media URL required for Image, PDF and Video. Templates are editable before sending.</small></div>
+            {notice && <div className="composeNotice" role="status">{notice}</div>}
           </form>}
         </> : <div className="emptyState">No conversation selected.</div>}
       </div>
