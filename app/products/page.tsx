@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import {BookOpen,CheckCircle2,ChevronRight,ExternalLink,FlaskConical,PackageSearch,RefreshCw,Save,Search,ShieldCheck} from "lucide-react";
-type CatalogItem={woo_id:number;name:string;slug:string;image_url:string|null;price:string|null;currency:string;stock_status:string|null;research_status:string;approved_sources:number;last_synced_at:string};
+type CatalogItem={woo_id:number;name:string;slug:string;product_url?:string|null;image_url:string|null;price:string|null;currency:string;stock_status:string|null;research_status:string;approved_sources:number;last_synced_at:string};
 type Source={id:string;title:string;url:string;snippet:string;query:string;source_type:"commercial"|"research";topic:string};
 type Product=CatalogItem &{woo_data?:{agent_context?:Record<string,unknown>;images?:{url?:string}[]};benefits?:string;positioning?:string;ingredients?:string;usage?:string;faq?:string;notes?:string;safety_notes?:string;research_draft?:Source[];approved_research?:Source[]};
 type EditKey="benefits"|"positioning"|"ingredients"|"usage"|"faq"|"notes"|"safety_notes";
