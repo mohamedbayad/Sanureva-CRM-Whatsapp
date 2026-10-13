@@ -1,7 +1,6 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import {BookOpen,CheckCircle2,ChevronRight,ExternalLink,FlaskConical,PackageSearch,RefreshCw,Save,Search,ShieldCheck} from "lucide-react";
-import {PageHeader} from "@/components/PageHeader";
 type CatalogItem={woo_id:number;name:string;slug:string;image_url:string|null;price:string|null;currency:string;stock_status:string|null;research_status:string;approved_sources:number;last_synced_at:string};
 type Source={id:string;title:string;url:string;snippet:string;query:string;source_type:"commercial"|"research";topic:string};
 type Product=CatalogItem &{woo_data?:{agent_context?:Record<string,unknown>;images?:{url?:string}[]};benefits?:string;positioning?:string;ingredients?:string;usage?:string;faq?:string;notes?:string;safety_notes?:string;research_draft?:Source[];approved_research?:Source[]};
@@ -30,7 +29,7 @@ export default function ProductsPage(){
  const [notice,setNotice]=useState("");
  const readOnly=process.env.NEXT_PUBLIC_CRM_PREVIEW_READONLY==="1";
  async function list(){const r=await fetch("/api/products",{cache:"no-store"});const j=await r.json();if(!r.ok)throw Error(j.error||"Products unavailable");setAll(j.products||[]);return j.products as CatalogItem[]}
- async function open(id:number){setActive(id);setError("");setNotice("");setDetail(null);setChecked([]);
+ async function open(id:number){setActive(id);setError("");setDetail(null);setChecked([]);
   try{const r=await fetch("/api/products?id="+encodeURIComponent(id),{cache:"no-store"});const j=await r.json();if(!r.ok)throw Error(j.error||"Product unavailable");setDetail(j.product);setForm(Object.fromEntries(fields.map(f=>[f.key,String(j.product[f.key]||"")])) as Record<EditKey,string>);setTopic("");}catch(e){setError(e instanceof Error?e.message:"Unable to load product")}
  }
  useEffect(()=>{let cancelled=false;list().then(items=>{if(!cancelled&&items.length)void open(Number(items[0].woo_id));}).catch(e=>{if(!cancelled)setError(e.message)}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true}},[]);
@@ -50,7 +49,7 @@ export default function ProductsPage(){
   }catch(e){setError(e instanceof Error?e.message:"Request failed")}finally{setBusy("")}
  }
  return <div className="productHub">
-  <PageHeader title="Product Knowledge" description="WooCommerce catalog · editorial knowledge · Serper research · WhatsApp sales agent"/>
+  <header className="pageHeader"><div><h1>Product Knowledge</h1><p>WooCommerce catalog · editorial knowledge · Serper research · WhatsApp sales agent</p></div></header>
   <div className="productHubStats"><div><strong>{all.length}</strong><span>WooCommerce products</span></div><div><strong>{all.filter(x=>x.research_status==="approved").length}</strong><span>Research approved</span></div><div><strong>{all.filter(x=>x.research_status==="draft").length}</strong><span>Waiting for review</span></div></div>
   <div className="productHubLayout">
    <aside className="productHubList">
@@ -58,7 +57,7 @@ export default function ProductsPage(){
     <label className="productHubSearch"><Search size={16}/><input aria-label="Find a product" placeholder="Search products..." value={filter} onChange={e=>setFilter(e.target.value)}/></label>
     {loading&&<p className="productHubEmpty">Loading WooCommerce catalog...</p>}
     {!loading&&!filtered.length&&<p className="productHubEmpty">No products found. WooCommerce sync may still be pending.</p>}
-    {filtered.map(p=><button key={p.woo_id} type="button" onClick={()=>void open(Number(p.woo_id))} className={"productHubOption"+(active===Number(p.woo_id)?" chosen":"")}>
+    {filtered.map(p=><button key={p.woo_id} type="button" onClick={()=>{setNotice("");void open(Number(p.woo_id))}} className={"productHubOption"+(active===Number(p.woo_id)?" chosen":"")}>
       {p.image_url?<img src={p.image_url} alt="" loading="lazy"/>:<span className="productHubImageEmpty"><PackageSearch size={20}/></span>}
       <span className="productHubOptionText"><strong>{p.name}</strong><small>#{p.woo_id} · {p.price?Number(p.price).toLocaleString("es-GT")+" "+p.currency:"Price unavailable"}</small></span>
       <ChevronRight size={16}/>
@@ -72,6 +71,7 @@ export default function ProductsPage(){
       {detail.product_url&&<a href={detail.product_url} target="_blank" rel="noreferrer">View store listing <ExternalLink size={13}/></a>}</div>
      </div>
      <div className="productHubNotice"><ShieldCheck size={17}/><span>WooCommerce pricing, stock and product listing are read-only here. Manual notes and approved research are stored separately.</span></div>
+     <div className="productHubPanel productHubAccess"><h3>Admin access</h3><p>Use the CRM admin key to save information, search Google and approve research. It is never sent to WooCommerce or Serper.</p><input type="password" autoComplete="off" placeholder="CRM_TEMPLATE_ADMIN_KEY" value={adminKey} onChange={e=>setAdminKey(e.target.value)}/><small>Google research also requires SERPER_API_KEY in Vercel Production.</small></div>
      <div className="productHubPanel">
       <h3><BookOpen size={18}/> Product knowledge editor</h3>
       <p>Write trusted information for your WhatsApp sales bot. These notes are not automatically added to WooCommerce.</p>
@@ -89,12 +89,7 @@ export default function ProductsPage(){
        <div className="productHubResearchHead"><strong>Approved sources ({approved.length})</strong><small>Available for sales knowledge</small></div>
        {!approved.length?<p className="productHubEmpty">No research approved yet.</p>:<div className="productHubSources">{approved.map(src=><div className="productHubSource" key={src.id}><CheckCircle2 size={17}/><span><strong>{src.title}</strong><small>{src.snippet}</small><a href={src.url} target="_blank" rel="noreferrer">Open source <ExternalLink size={12}/></a></span></div>)}</div>}
      </div>
-     <div className="productHubPanel productHubAccess">
-       <h3>Admin access</h3>
-       <p>Use the CRM admin key to save knowledge, search Google and approve sources. It is never sent to Serper or WooCommerce.</p>
-       <input type="password" autoComplete="off" placeholder="CRM_TEMPLATE_ADMIN_KEY" value={adminKey} onChange={e=>setAdminKey(e.target.value)}/>
-       <small>Google research requires SERPER_API_KEY configured in Vercel Production.</small>
-     </div>
+
     </>}
     {(error||notice)&&<div role="status" className={"productHubFeedback"+(error?" hasError":"")}>{error||notice}</div>}
    </section>
