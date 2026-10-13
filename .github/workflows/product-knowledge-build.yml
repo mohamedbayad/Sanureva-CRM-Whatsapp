@@ -1,0 +1,26 @@
+name: Product Knowledge build check
+on:
+  push:
+    branches:
+      - feature/product-knowledge-serper-20261013
+  pull_request:
+    paths:
+      - "app/products/**"
+      - "app/api/products/**"
+      - "components/Sidebar.tsx"
+      - "app/globals.css"
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build

@@ -264,3 +264,67 @@ tr:last-child td { border-bottom:0; }
 .inboxPurchaseManual p{font-size:11px;color:#647e70;margin:5px 0}
 .inboxPurchaseManual label{font-size:11px;display:grid;gap:6px}
 .inboxPurchaseManual input{width:100%;background:#fff;border:1px solid #d6e5dc;border-radius:8px;padding:10px;font-size:12px;min-width:0}
+
+
+/* WooCommerce product knowledge workspace */
+.productHub{padding-bottom:45px}
+.productHubStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:16px 0 20px}
+.productHubStats>div{border:1px solid var(--line);border-radius:13px;background:#fff;padding:16px 18px;display:grid;gap:3px}
+.productHubStats strong{font-size:25px;line-height:1.2;color:var(--text)}
+.productHubStats span{font-size:12px;color:var(--muted)}
+.productHubLayout{display:grid;grid-template-columns:minmax(240px,300px) minmax(0,1fr);align-items:start;gap:16px}
+.productHubList,.productHubPanel,.productHubHero,.productHubNotice{background:white;border:1px solid var(--line);border-radius:14px}
+.productHubList{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto}
+.productHubListHead{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 7px;font-size:14px}
+.productHubListHead button{border:0;background:var(--panel-soft);padding:7px;border-radius:7px}
+.productHubSearch{margin:6px 13px 13px;display:flex;gap:8px;align-items:center;background:var(--panel-soft);padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--muted)}
+.productHubSearch input{border:0;outline:0;background:transparent;width:100%;min-width:0;color:var(--text);font-size:13px}
+.productHubOption{width:100%;display:flex;gap:10px;align-items:center;padding:11px 13px;border:0;border-top:1px solid #f0f3f6;background:transparent;text-align:left;color:var(--text)}
+.productHubOption:hover,.productHubOption.chosen{background:#eff9f4}
+.productHubOption>img,.productHubImageEmpty{width:49px;height:54px;flex-shrink:0;object-fit:contain;border:1px solid var(--line);border-radius:8px;background:#fff}
+.productHubImageEmpty{display:grid;place-items:center}
+.productHubOptionText{min-width:0;flex:1;display:grid;gap:5px}
+.productHubOptionText strong{font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.productHubOptionText small{font-size:11px;color:var(--muted)}
+.productHubMain{display:grid;gap:15px;min-width:0}
+.productHubHero{padding:19px;display:flex;align-items:center;gap:18px}
+.productHubHero>img{height:102px;width:94px;object-fit:contain;border-radius:10px;border:1px solid var(--line)}
+.productHubHero>div{min-width:0}
+.productHubHero small{font-size:11px;letter-spacing:.6px;color:var(--muted)}
+.productHubHero h2{font-size:18px;line-height:1.4;margin:5px 0 9px}
+.productHubHero p{font-size:12px;margin:0 0 8px;color:var(--muted)}
+.productHubHero p strong{color:var(--text)}
+.productHubHero a,.productHubSource a{display:inline-flex;align-items:center;gap:4px;color:var(--accent-strong);font-size:12px;font-weight:600}
+.productHubStatus{color:var(--accent-strong);font-weight:600;text-transform:capitalize}
+.productHubNotice{display:flex;align-items:start;gap:10px;padding:13px 16px;color:#537264;background:#f3faf6;font-size:12px;line-height:1.5}
+.productHubPanel{padding:18px;display:grid;gap:12px}
+.productHubPanel h3{font-size:15px;display:flex;align-items:center;gap:9px;margin:0}
+.productHubPanel>p{font-size:12px;line-height:1.6;color:var(--muted);margin:0}
+.productHubFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.productHubFields label{display:grid;gap:6px}
+.productHubFields label strong{font-size:12px;font-weight:650}
+.productHubFields textarea,.productHubAccess input,.productHubResearchInput input{width:100%;padding:11px 12px;border:1px solid #dbe3ea;border-radius:9px;background:#fff;outline-color:var(--accent);font-size:12px;color:var(--text);resize:vertical;min-width:0}
+.productHubActions{display:flex;justify-content:flex-end}
+.productHubActions button,.productHubResearchInput button{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--accent-strong);border:none;border-radius:9px;color:white;padding:11px 14px;font-size:12px;font-weight:700}
+.productHubActions button:disabled,.productHubResearchInput button:disabled{opacity:.5;cursor:not-allowed}
+.productHubResearchInput{display:flex;gap:9px}
+.productHubResearchInput input{flex:1}
+.productHubResearchInput button{white-space:nowrap}
+.productHubResearchHead{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:8px}
+.productHubResearchHead strong{font-size:13px}
+.productHubResearchHead small{color:var(--muted);font-size:11px}
+.productHubSources{display:grid;gap:9px}
+.productHubSource{display:flex;align-items:flex-start;gap:11px;padding:13px;border-radius:10px;border:1px solid var(--line);background:#fbfcfd;min-width:0}
+.productHubSource>input{margin:4px 0 0;flex-shrink:0;accent-color:var(--accent-strong)}
+.productHubSource>svg{flex-shrink:0;color:var(--accent-strong)}
+.productHubSource>span{display:grid;gap:5px;min-width:0}
+.productHubSource strong{font-size:12px;line-height:1.5}
+.productHubSource small{font-size:11px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.productHubSourceType{font-size:10px!important;font-weight:700;text-transform:uppercase;color:var(--accent-strong)}
+.productHubEmpty{font-size:12px;color:var(--muted);padding:16px;line-height:1.6}
+.productHubAccess{background:#f9fbfd}
+.productHubAccess small{font-size:11px;color:var(--muted)}
+.productHubFeedback{padding:13px;border-radius:10px;background:var(--accent-soft);color:var(--accent-strong);font-size:12px}
+.productHubFeedback.hasError{background:var(--red-soft);color:var(--red)}
+@media(max-width:950px){.productHubLayout{grid-template-columns:1fr}.productHubList{position:static;max-height:350px}.productHubFields{grid-template-columns:1fr}}
+@media(max-width:600px){.productHubStats{gap:7px}.productHubStats>div{padding:11px}.productHubStats strong{font-size:19px}.productHubStats span{font-size:10px}.productHubHero{padding:12px;gap:10px}.productHubHero>img{width:65px;height:85px}.productHubHero h2{font-size:15px}.productHubPanel{padding:13px}.productHubResearchInput{flex-wrap:wrap}.productHubResearchInput button{width:100%}}
