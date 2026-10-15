@@ -202,6 +202,61 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
 
   // Keep AI analysis private in n8n; the CRM receives original WhatsApp media
   // identifiers and short-lived signed URLs instead of vision/transcript text.
+  // Normalize photos after choosing n8n OR Neon. Neon source_record preserves
+  // the original [PRODUCT_IMAGE_URL] marker and otherwise loses the image on polling.
+  const productImageMarker = /\[PRODUCT_IMAGE_URL:(https:\/\/[^\]\s]+)\]/i;
+  const verifiedProductPhoto = (candidate: string): string => {
+    try {
+      const u = new URL(candidate);
+      if (u.protocol !== "https:" || u.hostname.toLowerCase() !== "sanureva.com" ||
+          u.username || u.password || u.port ||
+          !/^\/wp-content\/uploads\/\d{4}\/\d{2}\/[^?#]+\.(?:jpe?g|png|webp)$/i.test(u.pathname)) return "";
+      return u.href;
+    } catch { return ""; }
+  };
+  const publicAttachment = (candidate: string): string => {
+    try {
+      const u = new URL(candidate);
+      const host = u.hostname.toLowerCase();
+      if (u.protocol !== "https:" || u.username || u.password || u.port ||
+          host === "localhost" || host.endsWith(".localhost") ||
+          /^(?:127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(host)) return "";
+      return u.href;
+    } catch { return ""; }
+  };
+  // Outbox rows contain the original media link for manual image/doc/video sends.
+  // Join on WAMID instead of relying on what happened to be copied to MESSAGES.
+  const manualMediaByWamid = new Map<string, { kind: string; url: string }>();
+  for (const entry of sheets[SHEET_NAMES.outbox] || []) {
+    const wamid = cleanDisplay(entry.WAMID);
+    const type = cleanDisplay(entry.Type).toLowerCase();
+    const kind = type === "pdf" ? "document" : type;
+    const action = cleanDisplay(entry.Action).toUpperCase();
+    const status = cleanDisplay(entry.Status).toUpperCase();
+    const mediaUrl = publicAttachment(cleanDisplay(entry["Media URL"]));
+    if (wamid.startsWith("wamid.") && ["image", "video", "document"].includes(kind) &&
+        ["DONE", "SENT"].includes(action) && ["SENT", "ACCEPTED"].includes(status) && mediaUrl) {
+      manualMediaByWamid.set(wamid, { kind, url: mediaUrl });
+    }
+  }
+  for (const row of messages) {
+    if (!cleanDisplay(row.Direction).toLowerCase().includes("outbound")) continue;
+    const content = cleanDisplay(row["Message Content Snippet"]);
+    const match = productImageMarker.exec(content);
+    const imageUrl = match ? verifiedProductPhoto(match[1]) : "";
+    if (imageUrl && match) {
+      row["Media Kind"] = "image";
+      row["Media URL"] = imageUrl;
+      row["Message Content Snippet"] = content.replace(match[0], "").trim() || "📷 Foto";
+      continue;
+    }
+    const manual = manualMediaByWamid.get(cleanDisplay(row["WhatsApp WAMID"]));
+    if (manual && !cleanDisplay(row["Media Kind"])) {
+      row["Media Kind"] = manual.kind;
+      row["Media URL"] = manual.url;
+    }
+  }
+
   const expiry = Math.ceil((Date.now() / 1000 + 600) / 300) * 300;
   const mediaMarker = /\[\[WA_MEDIA:(image|audio|video|document):(\d{8,30})\]\]/;
   for (const row of messages) {
