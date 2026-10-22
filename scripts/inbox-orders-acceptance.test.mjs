@@ -52,6 +52,7 @@ function loadComponent(path) {
     if (name === "@/components/PageHeader") return { PageHeader: ({title,subtitle}) => React.createElement("header",null,title," — ",subtitle) };
     if (name === "@/components/Loading") return { Loading: () => React.createElement("p",null,"Loading") };
     if (name === "@/components/MediaBubble") return { MediaBubble: ({message}) => React.createElement("p",null,format.cleanDisplay(message["Message Content Snippet"])), chatPreview: (m) => m ? format.cleanDisplay(m["Media Kind"]) || format.cleanDisplay(m["Message Content Snippet"]) : "" };
+    if (name === "@/components/MessageStatusTicks") return { MessageStatusTicks: ({status}) => React.createElement("span",{"aria-label":String(status||"pending")}) };
     if (name === "@/components/StatusBadge") return { StatusBadge: ({value}) => React.createElement("span",null,String(value||"")) };
     if (name === "@/lib/contracts") return { SHEET_NAMES };
     if (name === "@/lib/format") return format;
@@ -114,7 +115,7 @@ test("Orders and Inbox are GET-only in Preview's page code", () => {
 test("Statuses are filtered from snapshots before appearing in chat threads", () => {
   const src=read("lib/n8n.ts");
   const model=read("lib/status-records.ts");
-  assert.match(src,/filter\(\(m\) => !isStatusOnlyRecord\(m\)\)/);
+  assert.match(src,/filter\(\(m\) =>\s*!isStatusOnlyRecord\(m\)/);
   assert.match(model,/DELIVERY_STATUSES/);
   assert.match(model,/!get\("Message ID"\)/);
   assert.match(model,/!get\("Conversation ID"\)/);
