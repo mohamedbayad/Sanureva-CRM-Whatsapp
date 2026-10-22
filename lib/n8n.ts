@@ -192,12 +192,56 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
     "Customer Name": "nena",
   };
   // Delivery callbacks are tracked separately; keep them in source storage, not in chat views.
-  const messages = (sheets[SHEET_NAMES.messages] || []).filter((m) => !isStatusOnlyRecord(m));
+  // Neon-only manual retries may have sparse raw source_record objects in the
+  // mirror. Replace those with real chat records instead of rendering ghost rows.
+  const messages = (sheets[SHEET_NAMES.messages] || []).filter((m) =>
+    !isStatusOnlyRecord(m) &&
+    !(cleanDisplay(m.source) === "n8n_one_time_template_retry" && !cleanDisplay(m["Message ID"]))
+  );
   const existingIndex = messages.findIndex((m) => cleanDisplay(m["WhatsApp WAMID"]) === repairedWamid);
   if (existingIndex >= 0) {
     messages[existingIndex] = { ...messages[existingIndex], ...repairedMessage };
   } else {
     messages.push(repairedMessage);
+  }
+
+  // Merge Neon-only manual retries into the displayed inbox. This is a
+  // read-only repair: it never queues a WhatsApp message or modifies Sheets.
+  // A real, known conversation and an exact WAMID are required, so status-only
+  // webhooks and duplicate sends cannot turn into phantom chat bubbles.
+  if ((process.env.DATABASE_URL || "").trim()) {
+    try {
+      const { getNeonManualRetryMessages } = await import("@/lib/neon-snapshot");
+      const knownConversations = new Set(
+        (sheets[SHEET_NAMES.conversations] || [])
+          .map((c) => cleanDisplay(c["Conversation ID"]))
+          .filter(Boolean)
+      );
+      const byWamid = new Map(
+        messages.map((m, i) => [cleanDisplay(m["WhatsApp WAMID"]), i] as const)
+          .filter(([wamid]) => wamid.startsWith("wamid."))
+      );
+      for (const retry of await getNeonManualRetryMessages()) {
+        if (!knownConversations.has(cleanDisplay(retry["Conversation ID"]))) continue;
+        const wamid = cleanDisplay(retry["WhatsApp WAMID"]);
+        if (!wamid) continue;
+        const existing = byWamid.get(wamid);
+        if (existing !== undefined) {
+          // Keep any richer Sheets content, but show the latest true status.
+          messages[existing] = {
+            ...retry,
+            ...messages[existing],
+            "Delivery Status": retry["Delivery Status"],
+          };
+        } else {
+          byWamid.set(wamid, messages.length);
+          messages.push(retry);
+        }
+      }
+    } catch (error) {
+      // A transient Neon outage must never hide the normal Sheets inbox.
+      console.error("Neon manual retry inbox overlay unavailable:", error instanceof Error ? error.message : "unknown error");
+    }
   }
 
   // Keep AI analysis private in n8n; the CRM receives original WhatsApp media
