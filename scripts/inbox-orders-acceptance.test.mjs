@@ -128,3 +128,80 @@ test("All non-exempt API and Pages require CRM session in proxy", () => {
   assert.match(proxy,/status: isReady \? 401 : 503/);
   assert.doesNotMatch(proxy,/pathname === "\/api\/outbox"\s*\|\|/);
 });
+
+
+// Direct Woo order intake regression: synthetic-only, no DB/network access.
+function loadDirectWooAdapter() {
+  const js = ts.transpileModule(read("lib/direct-woo-orders.ts"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const mod = { exports: {} };
+  const resolver = (name) => {
+    if (name === "@neondatabase/serverless") {
+      return { neon: () => { throw new Error("Synthetic tests must not connect to Neon"); } };
+    }
+    return require(name);
+  };
+  new Function("require", "module", "exports", js)(resolver, mod, mod.exports);
+  return mod.exports;
+}
+
+test("Direct Woo Neon overlay never duplicates an existing order or resets WhatsApp confirmations", () => {
+  const { toCrmOrder, mergeDirectWooOrders } = loadDirectWooAdapter();
+  const mirrored = toCrmOrder({
+    order_id: "QA-ORDER-501",
+    customer_name: "Fixture Updated",
+    customer_city: "Mixco",
+    grand_total: "189.00",
+    woocommerce_status: "processing",
+    whatsapp_status: null,
+    delivery_status: null,
+    reminders_sent: 0,
+    source_record: { woocommerce_direct: true, product_summary: "Sample x1" },
+  });
+  assert.equal(mirrored["Order ID"], "QA-ORDER-501");
+  assert.equal(mirrored["Final Total (MAD)"], "189.00");
+  const existing = [{
+    "Order ID": "QA-ORDER-501",
+    "Customer Name": "Fixture Initial",
+    "WhatsApp Status": "read",
+    "Delivery Status": "delivered",
+    "Confirmation Received": "2026-10-22T12:00:00Z",
+    "Reminders Sent": 1,
+  }];
+  const merged = mergeDirectWooOrders(existing, [mirrored, mirrored]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0]["Customer Name"], "Fixture Updated");
+  assert.equal(merged[0]["WooCommerce Status"], "processing");
+  assert.equal(merged[0]["WhatsApp Status"], "read");
+  assert.equal(merged[0]["Delivery Status"], "delivered");
+  assert.equal(merged[0]["Reminders Sent"], 1);
+  assert.equal(merged[0]["Confirmation Received"], "2026-10-22T12:00:00Z");
+});
+
+test("Direct Woo order appears without existing Sheets row or WhatsApp send", () => {
+  const { toCrmOrder, mergeDirectWooOrders } = loadDirectWooAdapter();
+  const row = toCrmOrder({
+    order_id: "QA-ORDER-NO-WA",
+    customer_name: "Fixture No WhatsApp",
+    grand_total: "179",
+    woocommerce_status: "pending",
+    source_record: { woocommerce_direct: true, product_summary: "New order" },
+  });
+  const merged = mergeDirectWooOrders([], [row]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0]["Order ID"], "QA-ORDER-NO-WA");
+  assert.equal(merged[0]["WooCommerce Status"], "pending");
+  assert.equal(merged[0]["WhatsApp Status"], "");
+  assert.equal(merged[0]["Confirmation Received"], "");
+});
+
+test("Neon mirror materializes direct Woo rows and retains Sheets fallback route", () => {
+  const snapshot = read("lib/neon-snapshot.ts");
+  const api = read("app/api/snapshot/route.ts");
+  assert.match(snapshot, /orders:\s*orderToRecords\(orders\)/);
+  assert.match(snapshot, /woocommerce_direct === true\s*\? toCrmOrder\(row\)/);
+  assert.match(api, /getNeonRawSnapshot\(\)/);
+  assert.match(api, /mergeDirectWooOrders\(/);
+  assert.doesNotMatch(api, /send_message|queueWhatsAppMessage|\.POST\(/);
+});
