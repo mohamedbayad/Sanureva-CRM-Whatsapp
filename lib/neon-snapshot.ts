@@ -100,3 +100,22 @@ export async function getNeonManualRetryMessages(): Promise<SheetRecord[]> {
     return [record];
   });
 }
+
+
+/** Latest authoritative WhatsApp status callback for every logged message WAMID. */
+export async function getNeonLatestMessageStatuses(): Promise<Array<{ wamid: string; status: string }>> {
+  const url = (process.env.DATABASE_URL || "").trim();
+  if (!url) return [];
+  const sql = neon(url);
+  const rows = await sql`
+    SELECT DISTINCT ON (whatsapp_wamid)
+           whatsapp_wamid, delivery_status
+    FROM public.whatsapp_delivery_events
+    WHERE NULLIF(BTRIM(whatsapp_wamid), '') IS NOT NULL
+    ORDER BY whatsapp_wamid, status_at DESC, received_at DESC
+  `;
+  return rows.map((row) => ({
+    wamid: String(row.whatsapp_wamid || ""),
+    status: String(row.delivery_status || "").toLowerCase(),
+  }));
+}
