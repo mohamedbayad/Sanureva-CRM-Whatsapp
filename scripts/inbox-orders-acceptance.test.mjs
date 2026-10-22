@@ -52,6 +52,7 @@ function loadComponent(path) {
     if (name === "@/components/PageHeader") return { PageHeader: ({title,subtitle}) => React.createElement("header",null,title," — ",subtitle) };
     if (name === "@/components/Loading") return { Loading: () => React.createElement("p",null,"Loading") };
     if (name === "@/components/MediaBubble") return { MediaBubble: ({message}) => React.createElement("p",null,format.cleanDisplay(message["Message Content Snippet"])), chatPreview: (m) => m ? format.cleanDisplay(m["Media Kind"]) || format.cleanDisplay(m["Message Content Snippet"]) : "" };
+    if (name === "@/components/MessageStatusTicks") return { MessageStatusTicks: ({status}) => React.createElement("span",{"aria-label":String(status||"pending")}) };
     if (name === "@/components/StatusBadge") return { StatusBadge: ({value}) => React.createElement("span",null,String(value||"")) };
     if (name === "@/lib/contracts") return { SHEET_NAMES };
     if (name === "@/lib/format") return format;
@@ -114,7 +115,7 @@ test("Orders and Inbox are GET-only in Preview's page code", () => {
 test("Statuses are filtered from snapshots before appearing in chat threads", () => {
   const src=read("lib/n8n.ts");
   const model=read("lib/status-records.ts");
-  assert.match(src,/filter\(\(m\) => !isStatusOnlyRecord\(m\)\)/);
+  assert.match(src,/filter\(\(m\) =>\s*!isStatusOnlyRecord\(m\)/);
   assert.match(model,/DELIVERY_STATUSES/);
   assert.match(model,/!get\("Message ID"\)/);
   assert.match(model,/!get\("Conversation ID"\)/);
@@ -126,4 +127,160 @@ test("All non-exempt API and Pages require CRM session in proxy", () => {
   assert.match(proxy,/pathname\.startsWith\("\/api\/"\)/);
   assert.match(proxy,/status: isReady \? 401 : 503/);
   assert.doesNotMatch(proxy,/pathname === "\/api\/outbox"\s*\|\|/);
+});
+
+
+// Direct Woo order intake regression: synthetic-only, no DB/network access.
+function loadDirectWooAdapter() {
+  const js = ts.transpileModule(read("lib/direct-woo-orders.ts"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const mod = { exports: {} };
+  const resolver = (name) => {
+    if (name === "@neondatabase/serverless") {
+      return { neon: () => { throw new Error("Synthetic tests must not connect to Neon"); } };
+    }
+    return require(name);
+  };
+  new Function("require", "module", "exports", js)(resolver, mod, mod.exports);
+  return mod.exports;
+}
+
+test("Direct Woo Neon overlay never duplicates an existing order or resets WhatsApp confirmations", () => {
+  const { toCrmOrder, mergeDirectWooOrders } = loadDirectWooAdapter();
+  const mirrored = toCrmOrder({
+    order_id: "QA-ORDER-501",
+    customer_name: "Fixture Updated",
+    customer_city: "Mixco",
+    grand_total: "189.00",
+    woocommerce_status: "processing",
+    whatsapp_status: null,
+    delivery_status: null,
+    reminders_sent: 0,
+    source_record: { woocommerce_direct: true, product_summary: "Sample x1" },
+  });
+  assert.equal(mirrored["Order ID"], "QA-ORDER-501");
+  assert.equal(mirrored["Final Total (MAD)"], "189.00");
+  const existing = [{
+    "Order ID": "QA-ORDER-501",
+    "Customer Name": "Fixture Initial",
+    "WhatsApp Status": "read",
+    "Delivery Status": "delivered",
+    "Confirmation Received": "2026-10-22T12:00:00Z",
+    "Reminders Sent": 1,
+  }];
+  const merged = mergeDirectWooOrders(existing, [mirrored, mirrored]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0]["Customer Name"], "Fixture Updated");
+  assert.equal(merged[0]["WooCommerce Status"], "processing");
+  assert.equal(merged[0]["WhatsApp Status"], "read");
+  assert.equal(merged[0]["Delivery Status"], "delivered");
+  assert.equal(merged[0]["Reminders Sent"], 1);
+  assert.equal(merged[0]["Confirmation Received"], "2026-10-22T12:00:00Z");
+});
+
+test("Direct Woo order appears without existing Sheets row or WhatsApp send", () => {
+  const { toCrmOrder, mergeDirectWooOrders } = loadDirectWooAdapter();
+  const row = toCrmOrder({
+    order_id: "QA-ORDER-NO-WA",
+    customer_name: "Fixture No WhatsApp",
+    grand_total: "179",
+    woocommerce_status: "pending",
+    source_record: { woocommerce_direct: true, product_summary: "New order" },
+  });
+  const merged = mergeDirectWooOrders([], [row]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0]["Order ID"], "QA-ORDER-NO-WA");
+  assert.equal(merged[0]["WooCommerce Status"], "pending");
+  assert.equal(merged[0]["WhatsApp Status"], "");
+  assert.equal(merged[0]["Confirmation Received"], "");
+});
+
+test("Neon mirror materializes direct Woo rows and retains Sheets fallback route", () => {
+  const snapshot = read("lib/neon-snapshot.ts");
+  const api = read("app/api/snapshot/route.ts");
+  assert.match(snapshot, /orders:\s*orderToRecords\(orders\)/);
+  assert.match(snapshot, /woocommerce_direct === true\s*\? toCrmOrder\(row\)/);
+  assert.match(api, /getNeonRawSnapshot\(\)/);
+  assert.match(api, /mergeDirectWooOrders\(/);
+  assert.doesNotMatch(api, /send_message|queueWhatsAppMessage|\.POST\(/);
+});
+
+function loadSnapshotSingleflight() {
+  const js = ts.transpileModule(read("lib/snapshot-singleflight.ts"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  const mod = { exports: {} };
+  new Function("require", "module", "exports", js)(require, mod, mod.exports);
+  return mod.exports.createSnapshotSingleflight;
+}
+
+test("Snapshot singleflight coalesces concurrent reads and expires after 10 seconds", async () => {
+  const create = loadSnapshotSingleflight();
+  let now = 1000;
+  let calls = 0;
+  let resolveFirst;
+  const gate = new Promise((resolve) => { resolveFirst = resolve; });
+  const cached = create(10000, () => now);
+  const load = async () => { calls++; await gate; return { version: calls }; };
+  const first = cached.get(load);
+  const second = cached.get(load);
+  await Promise.resolve();
+  assert.equal(calls, 1);
+  resolveFirst();
+  const results = await Promise.all([first, second]);
+  assert.deepEqual(results, [{version: 1}, {version: 1}]);
+  const third = await cached.get(load);
+  assert.equal(calls, 1);
+  assert.deepEqual(third, {version: 1});
+  now = 11000; // 10s later, cached value must expire.
+  const fourth = await cached.get(load);
+  assert.equal(calls, 2);
+  assert.deepEqual(fourth, {version: 2});
+});
+
+test("Snapshot singleflight never caches rejected loads and permits immediate retry", async () => {
+  const create = loadSnapshotSingleflight();
+  let calls = 0;
+  const cached = create(10000, () => 1000);
+  await assert.rejects(
+    cached.get(async () => { calls++; throw new Error("simulated Sheets 429"); }),
+    /simulated Sheets 429/
+  );
+  assert.equal(calls, 1);
+  const fixed = await cached.get(async () => { calls++; return { recovered: true }; });
+  assert.deepEqual(fixed, { recovered: true });
+  assert.equal(calls, 2);
+  const reused = await cached.get(async () => { calls++; throw new Error("should not call"); });
+  assert.deepEqual(reused, fixed);
+  assert.equal(calls, 2);
+});
+
+test("Snapshot singleflight uses shorter fallback TTL and respects zero/invalid TTL", async () => {
+  const create = loadSnapshotSingleflight();
+  let now = 0, calls = 0;
+  const cache = create(10000, () => now);
+  const fallback = () => cache.get(async () => ({ version: ++calls }), () => 2000);
+  assert.deepEqual(await fallback(), { version: 1 });
+  now = 1999;
+  assert.deepEqual(await fallback(), { version: 1 });
+  now = 2000;
+  assert.deepEqual(await fallback(), { version: 2 });
+  const noCache = create(10000, () => now);
+  let fresh = 0;
+  await noCache.get(async () => ++fresh, () => Number.NaN);
+  await noCache.get(async () => ++fresh, () => Number.NaN);
+  assert.equal(fresh, 2);
+});
+
+test("CRM snapshot deduplication never disables session auth or WhatsApp no-send guard", () => {
+  const route = read("app/api/snapshot/route.ts");
+  const proxy = read("proxy.ts");
+  const outbox = read("app/api/outbox/route.ts");
+  assert.match(route, /createSnapshotSingleflight<CrmSnapshot>\(10000\)/);
+  assert.match(route, /snapshotReads\.get\(readSnapshotSafely/);
+  assert.match(route, /Gateway temporarily unavailable/);
+  assert.match(proxy, /verifyCrmSession\(/);
+  assert.match(outbox, /CRM_READ_SOURCE|VERCEL_ENV/);
+  assert.doesNotMatch(route, /send_message|queueWhatsAppMessage/);
 });

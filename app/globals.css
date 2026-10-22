@@ -328,3 +328,15 @@ tr:last-child td { border-bottom:0; }
 .productHubFeedback.hasError{background:var(--red-soft);color:var(--red)}
 @media(max-width:950px){.productHubLayout{grid-template-columns:1fr}.productHubList{position:static;max-height:350px}.productHubFields{grid-template-columns:1fr}}
 @media(max-width:600px){.productHubStats{gap:7px}.productHubStats>div{padding:11px}.productHubStats strong{font-size:19px}.productHubStats span{font-size:10px}.productHubHero{padding:12px;gap:10px}.productHubHero>img{width:65px;height:85px}.productHubHero h2{font-size:15px}.productHubPanel{padding:13px}.productHubResearchInput{flex-wrap:wrap}.productHubResearchInput button{width:100%}}
+
+
+/* WhatsApp-native delivery signals; the colour belongs to read, not merely delivered. */
+.messageMeta { display:flex !important; align-items:center; justify-content:flex-end; gap:9px; }
+.messageDelivery { display:inline-flex !important; flex-shrink:0; align-items:center; justify-content:center; vertical-align:middle; margin:0 !important; line-height:1; }
+.messageDelivery.pending { color:#8f9bab; }
+.messageDelivery.sent, .messageDelivery.delivered { color:#8092a5; }
+.messageDelivery.read { color:#179ad6; }
+.messageDelivery.failed { color:#df4444; }
+.chatMeta .chatPreview { display:flex; gap:5px; min-width:0; align-items:center; margin-top:5px; overflow:hidden; }
+.chatMeta .chatPreviewText { display:inline !important; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0; }
+.chatMeta .chatPreview .messageDelivery { margin:0 !important; }
