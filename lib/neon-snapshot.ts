@@ -45,3 +45,58 @@ export async function getNeonRawSnapshot(): Promise<Record<string, unknown>> {
     outbox: toRecords(outbox),
   };
 }
+
+/**
+ * Manual template retries can be accepted by WhatsApp without passing through
+ * the Sheets writer. Read their actual WAMIDs and delivery statuses from Neon
+ * so that the inbox can show the attempts without sending anything again.
+ */
+export async function getNeonManualRetryMessages(): Promise<SheetRecord[]> {
+  const url = (process.env.DATABASE_URL || "").trim();
+  if (!url) return [];
+  const sql = neon(url);
+  const rows = await sql`
+    SELECT m.legacy_message_id, m.whatsapp_wamid, m.conversation_id,
+           m.customer_phone, m.customer_name, m.order_id, m.message_text,
+           m.occurred_at,
+           COALESCE(last_status.delivery_status, m.delivery_status) AS current_status
+    FROM public.messages m
+    LEFT JOIN LATERAL (
+      SELECT d.delivery_status
+      FROM public.whatsapp_delivery_events d
+      WHERE d.whatsapp_wamid = m.whatsapp_wamid
+      ORDER BY d.status_at DESC, d.received_at DESC
+      LIMIT 1
+    ) last_status ON true
+    WHERE m.source_record ->> 'source' = 'n8n_one_time_template_retry'
+      AND m.direction = 'outbound'
+      AND NULLIF(BTRIM(m.whatsapp_wamid), '') IS NOT NULL
+      AND NULLIF(BTRIM(m.message_text), '') IS NOT NULL
+    ORDER BY m.occurred_at, m.id
+  `;
+
+  return rows.flatMap((row) => {
+    const phone = String(row.customer_phone || "").replace(/\D/g, "");
+    const conversationId = String(row.conversation_id || ("WA-" + phone));
+    const wamid = String(row.whatsapp_wamid || "").trim();
+    if (!/^\d{8,15}$/.test(phone) || conversationId !== "WA-" + phone || !wamid.startsWith("wamid.")) {
+      return [];
+    }
+    const record: SheetRecord = {
+      "Message ID": String(row.legacy_message_id || ("RETRY-" + wamid)),
+      "Conversation ID": conversationId,
+      "Order ID": String(row.order_id || ""),
+      "Timestamp": new Date(String(row.occurred_at)).toISOString(),
+      "Direction": "Outbound (Bot)",
+      "Message Type": "Template (HSM)",
+      "Message Content Snippet": String(row.message_text || ""),
+      // Preserve the real WhatsApp callback status. "sent" is not "delivered".
+      "Delivery Status": String(row.current_status || "unknown").toLowerCase(),
+      "WhatsApp WAMID": wamid,
+      "Unit Cost (MAD)": null,
+      "Customer Phone": phone,
+      "Customer Name": String(row.customer_name || ""),
+    };
+    return [record];
+  });
+}
