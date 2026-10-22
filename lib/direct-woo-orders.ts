@@ -47,3 +47,35 @@ export async function fetchDirectWooOrders(): Promise<SheetRecord[]> {
   `;
   return rows.map(toCrmOrder);
 }
+
+/** Merge by exact Woo order ID; keep known customer confirmation states. */
+export function mergeDirectWooOrders(existing: SheetRecord[], direct: SheetRecord[]): SheetRecord[] {
+  const byId = new Map<string, SheetRecord>();
+  for (const row of existing) {
+    const id = String(row["Order ID"] ?? "").trim();
+    if (id) byId.set(id, { ...row });
+  }
+  for (const row of direct) {
+    const id = String(row["Order ID"] ?? "").trim();
+    if (!id) continue;
+    const prior = byId.get(id);
+    if (!prior) {
+      byId.set(id, row);
+      continue;
+    }
+    const merged: SheetRecord = { ...prior };
+    for (const key of ["Customer Name", "Phone Number", "City", "Items / Products",
+                       "Order Value (MAD)", "Final Total (MAD)", "WooCommerce Status"]) {
+      const value = row[key];
+      if (value !== undefined && value !== null && String(value).trim() !== "") merged[key] = value;
+    }
+    // Preserve the original Woo order creation timestamp and tracked status.
+    for (const key of ["WhatsApp Status", "Delivery Status",
+                       "Confirmation Sent", "Confirmation Received", "Reminders Sent"]) {
+      const current = prior[key];
+      if (current === undefined || current === null || current === "") merged[key] = row[key] ?? "";
+    }
+    byId.set(id, merged);
+  }
+  return [...byId.values()];
+}
