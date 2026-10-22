@@ -94,7 +94,7 @@ export default function InboxPage() {
 
   if (loading && !data) return <Loading/>;
   return <>
-    <PageHeader title="WhatsApp Inbox" subtitle={previewReadonly ? "Read-only Neon preview · WhatsApp sending is disabled. Original attachments use signed, protected links; browser playback testing is pending." : "Live CRM view served by n8n. Manual replies are sent to n8n, which keeps the existing WhatsApp, Sheet and WooCommerce logic in control."} data={data} refresh={refresh}/>
+    <PageHeader title="WhatsApp Inbox" subtitle={previewReadonly ? "Read-only Neon preview · WhatsApp sending is disabled. Original attachments use signed, protected links. Original images and voice notes appear when available; browser playback testing is pending." : "Live CRM view served by n8n. Manual replies are sent to n8n, which keeps the existing WhatsApp, Sheet and WooCommerce logic in control."} data={data} refresh={refresh}/>
     {error && <div className="warningBox">{error}</div>}
     <section className="inboxPanel">
       <aside className="chatList">
