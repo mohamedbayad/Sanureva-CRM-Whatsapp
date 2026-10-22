@@ -205,3 +205,82 @@ test("Neon mirror materializes direct Woo rows and retains Sheets fallback route
   assert.match(api, /mergeDirectWooOrders\(/);
   assert.doesNotMatch(api, /send_message|queueWhatsAppMessage|\.POST\(/);
 });
+
+function loadSnapshotSingleflight() {
+  const js = ts.transpileModule(read("lib/snapshot-singleflight.ts"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  const mod = { exports: {} };
+  new Function("require", "module", "exports", js)(require, mod, mod.exports);
+  return mod.exports.createSnapshotSingleflight;
+}
+
+test("Snapshot singleflight coalesces concurrent reads and expires after 10 seconds", async () => {
+  const create = loadSnapshotSingleflight();
+  let now = 1000;
+  let calls = 0;
+  let resolveFirst;
+  const gate = new Promise((resolve) => { resolveFirst = resolve; });
+  const cached = create(10000, () => now);
+  const load = async () => { calls++; await gate; return { version: calls }; };
+  const first = cached.get(load);
+  const second = cached.get(load);
+  await Promise.resolve();
+  assert.equal(calls, 1);
+  resolveFirst();
+  const results = await Promise.all([first, second]);
+  assert.deepEqual(results, [{version: 1}, {version: 1}]);
+  const third = await cached.get(load);
+  assert.equal(calls, 1);
+  assert.deepEqual(third, {version: 1});
+  now = 11000; // 10s later, cached value must expire.
+  const fourth = await cached.get(load);
+  assert.equal(calls, 2);
+  assert.deepEqual(fourth, {version: 2});
+});
+
+test("Snapshot singleflight never caches rejected loads and permits immediate retry", async () => {
+  const create = loadSnapshotSingleflight();
+  let calls = 0;
+  const cached = create(10000, () => 1000);
+  await assert.rejects(
+    cached.get(async () => { calls++; throw new Error("simulated Sheets 429"); }),
+    /simulated Sheets 429/
+  );
+  assert.equal(calls, 1);
+  const fixed = await cached.get(async () => { calls++; return { recovered: true }; });
+  assert.deepEqual(fixed, { recovered: true });
+  assert.equal(calls, 2);
+  const reused = await cached.get(async () => { calls++; throw new Error("should not call"); });
+  assert.deepEqual(reused, fixed);
+  assert.equal(calls, 2);
+});
+
+test("Snapshot singleflight uses shorter fallback TTL and respects zero/invalid TTL", async () => {
+  const create = loadSnapshotSingleflight();
+  let now = 0, calls = 0;
+  const cache = create(10000, () => now);
+  const fallback = () => cache.get(async () => ({ version: ++calls }), () => 2000);
+  assert.deepEqual(await fallback(), { version: 1 });
+  now = 1999;
+  assert.deepEqual(await fallback(), { version: 1 });
+  now = 2000;
+  assert.deepEqual(await fallback(), { version: 2 });
+  const noCache = create(10000, () => now);
+  let fresh = 0;
+  await noCache.get(async () => ++fresh, () => Number.NaN);
+  await noCache.get(async () => ++fresh, () => Number.NaN);
+  assert.equal(fresh, 2);
+});
+
+test("CRM snapshot deduplication never disables session auth or WhatsApp no-send guard", () => {
+  const route = read("app/api/snapshot/route.ts");
+  const proxy = read("proxy.ts");
+  const outbox = read("app/api/outbox/route.ts");
+  assert.match(route, /createSnapshotSingleflight<CrmSnapshot>\(10000\)/);
+  assert.match(route, /snapshotReads\.get\(readSnapshotSafely/);
+  assert.match(route, /Gateway temporarily unavailable/);
+  assert.match(proxy, /verifyCrmSession\(/);
+  assert.match(outbox, /CRM_READ_SOURCE|VERCEL_ENV/);
+  assert.doesNotMatch(route, /send_message|queueWhatsAppMessage/);
+});
