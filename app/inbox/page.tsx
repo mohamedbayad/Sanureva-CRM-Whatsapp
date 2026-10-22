@@ -6,6 +6,7 @@ import { useCrm } from "@/components/use-crm";
 import { PageHeader } from "@/components/PageHeader";
 import { Loading } from "@/components/Loading";
 import { MediaBubble, chatPreview } from "@/components/MediaBubble";
+import { MessageStatusTicks } from "@/components/MessageStatusTicks";
 import { SHEET_NAMES } from "@/lib/contracts";
 import { cleanDisplay, dateValue, formatDate, normalizePhone } from "@/lib/format";
 import type { OutboxPayload, SheetRecord } from "@/lib/types";
@@ -98,12 +99,12 @@ export default function InboxPage() {
     <section className="inboxPanel">
       <aside className="chatList">
         <div className="chatSearch"><Search size={16}/><input placeholder="Search chats…" value={q} onChange={(e)=>setQ(e.target.value)}/></div>
-        <div className="chatRows">{ranked.map(({c,id,last})=><button key={id} className={activeId===id?"chatRow selected":"chatRow"} onClick={()=>setSelected(id)}><div className="avatar">{(cleanDisplay(c["Customer Name"]) || "?").slice(0,1).toUpperCase()}</div><div className="chatMeta"><div><strong>{cleanDisplay(c["Customer Name"]) || cleanDisplay(c["Customer Phone"])}</strong><time>{formatDate(last?.Timestamp || c["Started At"])}</time></div><span>{chatPreview(last) || cleanDisplay(c["Intent / Topic"]) || "No messages"}</span></div></button>)}</div>
+        <div className="chatRows">{ranked.map(({c,id,last})=><button key={id} className={activeId===id?"chatRow selected":"chatRow"} onClick={()=>setSelected(id)}><div className="avatar">{(cleanDisplay(c["Customer Name"]) || "?").slice(0,1).toUpperCase()}</div><div className="chatMeta"><div><strong>{cleanDisplay(c["Customer Name"]) || cleanDisplay(c["Customer Phone"])}</strong><time>{formatDate(last?.Timestamp || c["Started At"])}</time></div><span className="chatPreview">{last && cleanDisplay(last.Direction).toLowerCase().includes("outbound") && <MessageStatusTicks status={last["Delivery Status"]} />}<span className="chatPreviewText">{chatPreview(last) || cleanDisplay(c["Intent / Topic"]) || "No messages"}</span></span></div></button>)}</div>
       </aside>
       <div className="conversation">
         {active ? <>
           <div className="conversationHead"><div><strong>{cleanDisplay(active["Customer Name"]) || "Customer"}</strong><span>{phone} {orderId ? `· Order #${orderId}` : ""}</span></div><div className="inboxHeadTags"><span className="pill success">{stage}</span><span className="pill subtle"><Package size={12}/>{delivery}</span></div></div>
-          <div className="messages">{thread.length ? thread.map((m,i)=>{ const inbound=cleanDisplay(m.Direction).toLowerCase().includes("inbound"); return <div key={`${cleanDisplay(m["Message ID"])}-${i}`} className={inbound?"bubbleRow inbound":"bubbleRow outbound"}><div className="bubble"><MediaBubble message={m} /><small>{cleanDisplay(m["Message Type"])} · {cleanDisplay(m["Delivery Status"])} · {formatDate(m.Timestamp)}</small></div></div> }) : <div className="emptyState">No logged messages for this conversation.</div>}</div>
+          <div className="messages">{thread.length ? thread.map((m,i)=>{ const inbound=cleanDisplay(m.Direction).toLowerCase().includes("inbound"); return <div key={`${cleanDisplay(m["Message ID"])}-${i}`} className={inbound?"bubbleRow inbound":"bubbleRow outbound"}><div className="bubble"><MediaBubble message={m} /><small className="messageMeta"><span>{cleanDisplay(m["Message Type"])} · {formatDate(m.Timestamp)}</span>{!inbound && <MessageStatusTicks status={m["Delivery Status"]} />}</small></div></div> }) : <div className="emptyState">No logged messages for this conversation.</div>}</div>
           <section className="inboxDraftPanel" aria-label="Purchase follow-up status">
             <div className="inboxDraftHeader"><strong>Purchase follow-ups</strong><span>Automatic tracking · Draft only</span></div>
             {purchaseClarifications.some(x=>x.status==="awaiting_day")&&<div className="inboxPurchasePending"><strong>Awaiting purchase date</strong><p>Customer mentioned buying later but did not confirm a specific day. Ask which day suits them; do not schedule a message yet.</p></div>}
