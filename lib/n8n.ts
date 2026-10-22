@@ -211,7 +211,7 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
   // webhooks and duplicate sends cannot turn into phantom chat bubbles.
   if ((process.env.DATABASE_URL || "").trim()) {
     try {
-      const { getNeonManualRetryMessages } = await import("@/lib/neon-snapshot");
+      const { getNeonManualRetryMessages, getNeonLatestMessageStatuses } = await import("@/lib/neon-snapshot");
       const knownConversations = new Set(
         (sheets[SHEET_NAMES.conversations] || [])
           .map((c) => cleanDisplay(c["Conversation ID"]))
@@ -221,7 +221,11 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
         messages.map((m, i) => [cleanDisplay(m["WhatsApp WAMID"]), i] as const)
           .filter(([wamid]) => wamid.startsWith("wamid."))
       );
-      for (const retry of await getNeonManualRetryMessages()) {
+      const [retries, latestStatuses] = await Promise.all([
+        getNeonManualRetryMessages(),
+        getNeonLatestMessageStatuses(),
+      ]);
+      for (const retry of retries) {
         if (!knownConversations.has(cleanDisplay(retry["Conversation ID"]))) continue;
         const wamid = cleanDisplay(retry["WhatsApp WAMID"]);
         if (!wamid) continue;
@@ -237,6 +241,13 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
           byWamid.set(wamid, messages.length);
           messages.push(retry);
         }
+      }
+      // Delivery callbacks often arrive after the original Sheets message.
+      // Join by exact WhatsApp WAMID: never infer status by phone or time.
+      const latestByWamid = new Map(latestStatuses.map(({ wamid, status }) => [wamid, status]));
+      for (const message of messages) {
+        const status = latestByWamid.get(cleanDisplay(message["WhatsApp WAMID"]));
+        if (status) message["Delivery Status"] = status;
       }
     } catch (error) {
       // A transient Neon outage must never hide the normal Sheets inbox.
