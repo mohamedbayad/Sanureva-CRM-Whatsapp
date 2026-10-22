@@ -350,6 +350,25 @@ export async function getSnapshot(): Promise<CrmSnapshot> {
 
   sheets[SHEET_NAMES.messages] = messages;
 
+  // WhatsApp's accepted API response is not proof of delivery. For each order,
+  // prefer the latest real callback matched to its outbound message's exact WAMID.
+  // This is a read-only overlay, regardless of whether Sheets or Neon serves the CRM.
+  if ((process.env.DATABASE_URL || "").trim()) {
+    try {
+      const { getNeonLatestOrderStatuses } = await import("@/lib/neon-snapshot");
+      const statuses = await getNeonLatestOrderStatuses();
+      const byOrder = new Map(statuses.map(({ orderId, deliveryStatus }) => [orderId, deliveryStatus]));
+      for (const order of sheets[SHEET_NAMES.orders] || []) {
+        const status = byOrder.get(cleanDisplay(order["Order ID"]));
+        if (!status) continue;
+        order["Delivery Status"] = status;
+        order["WhatsApp Status"] = status.charAt(0).toUpperCase() + status.slice(1);
+      }
+    } catch (error) {
+      console.error("WhatsApp order status overlay unavailable:", error instanceof Error ? error.message : "unknown error");
+    }
+  }
+
   const localWarnings: string[] = [];
   for (const [sheetName, required] of Object.entries(REQUIRED_HEADERS) as [SheetName, readonly string[]][]) {
     const rows = sheets[sheetName] || [];

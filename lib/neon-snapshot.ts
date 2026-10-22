@@ -129,3 +129,35 @@ export async function getNeonLatestMessageStatuses(): Promise<Array<{ wamid: str
     status: String(row.delivery_status || "").toLowerCase(),
   }));
 }
+
+
+/** Actual delivery statuses from WhatsApp callbacks joined by exact WAMID and order. */
+export async function getNeonLatestOrderStatuses(): Promise<Array<{ orderId: string; deliveryStatus: string }>> {
+  const url = (process.env.DATABASE_URL || "").trim();
+  if (!url) return [];
+  const sql = neon(url);
+  const rows = await sql`
+    SELECT DISTINCT ON (m.order_id) m.order_id, latest.delivery_status
+    FROM public.messages m
+    INNER JOIN LATERAL (
+      SELECT d.delivery_status
+      FROM public.whatsapp_delivery_events d
+      WHERE d.whatsapp_wamid = m.whatsapp_wamid
+      ORDER BY d.status_at DESC, d.received_at DESC
+      LIMIT 1
+    ) latest ON TRUE
+    WHERE m.order_id IS NOT NULL
+      AND NULLIF(BTRIM(m.whatsapp_wamid), '') IS NOT NULL
+      AND m.direction = 'outbound'
+      AND (
+        LOWER(COALESCE(m.source_record ->> 'Message Type', '')) LIKE '%template%'
+        OR LOWER(COALESCE(m.source_record ->> 'Message Type', '')) LIKE '%confirmation reply%'
+        OR m.source_record ->> 'source' = 'n8n_one_time_template_retry'
+      )
+    ORDER BY m.order_id, m.occurred_at DESC, m.id DESC
+  `;
+  return rows.map((row) => ({
+    orderId: String(row.order_id || ""),
+    deliveryStatus: String(row.delivery_status || "").toLowerCase(),
+  })).filter(({ orderId, deliveryStatus }) => orderId && ['failed', 'sent', 'delivered', 'read'].includes(deliveryStatus));
+}
