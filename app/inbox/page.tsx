@@ -63,6 +63,13 @@ export default function InboxPage() {
   const phone = normalizePhone(active?.["Customer Phone"]);
   const relatedOrder = orders.find((o)=>normalizePhone(o["Phone Number"])===phone);
   const orderId = cleanDisplay(active?.["Order ID"]) || cleanDisplay(relatedOrder?.["Order ID"]);
+  const matchingOrder = orders.find((o) => cleanDisplay(o["Order ID"]) === orderId) || relatedOrder;
+  // Sending or reading a WhatsApp template does NOT mean the customer confirmed an order.
+  const confirmedByCustomer = ["yes", "true", "1"].includes(cleanDisplay(matchingOrder?.["Confirmation Received"]).toLowerCase());
+  const confirmationWasSent = ["yes", "true", "1"].includes(cleanDisplay(matchingOrder?.["Confirmation Sent"]).toLowerCase());
+  const confirmationLabel = !orderId ? "" : confirmedByCustomer
+    ? "Confirmed by customer"
+    : confirmationWasSent ? "Awaiting customer confirmation" : "Confirmation not sent";
   const stage = liveStage || cleanDisplay(active?.["Status"]) || "New lead";
   useEffect(()=>{ if(!phone){return;} let activeRequest=true; setLiveStage(""); fetch("/api/contact-stage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(x=>{if(activeRequest&&x.ok)setLiveStage(x.stage)}).catch(()=>{}); return()=>{activeRequest=false}; },[phone]);
   useEffect(()=>{if(!phone){setFollowupDrafts([]);return;}let live=true;setFollowupDrafts([]);setSelectedDraft(null);setDraftText("");fetch("/api/followup-drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})}).then(r=>r.json()).then(j=>{if(live&&j.ok&&Array.isArray(j.drafts))setFollowupDrafts(j.drafts)}).catch(()=>{});return()=>{live=false}},[phone]);
@@ -103,7 +110,7 @@ export default function InboxPage() {
       </aside>
       <div className="conversation">
         {active ? <>
-          <div className="conversationHead"><div><strong>{cleanDisplay(active["Customer Name"]) || "Customer"}</strong><span>{phone} {orderId ? `· Order #${orderId}` : ""}</span></div><div className="inboxHeadTags"><span className="pill success">{stage}</span><span className="pill subtle"><Package size={12}/>{delivery}</span></div></div>
+          <div className="conversationHead"><div><strong>{cleanDisplay(active["Customer Name"]) || "Customer"}</strong><span>{phone} {orderId ? `· Order #${orderId}` : ""}</span></div><div className="inboxHeadTags"><span className="pill success">{stage}</span>{orderId && <span className={confirmedByCustomer ? "pill success" : "pill subtle"}>{confirmationLabel}</span>}<span className="pill subtle"><Package size={12}/>{delivery}</span></div></div>
           <div className="messages">{thread.length ? thread.map((m,i)=>{ const inbound=cleanDisplay(m.Direction).toLowerCase().includes("inbound"); return <div key={`${cleanDisplay(m["Message ID"])}-${i}`} className={inbound?"bubbleRow inbound":"bubbleRow outbound"}><div className="bubble"><MediaBubble message={m} /><small className="messageMeta"><span>{cleanDisplay(m["Message Type"])} · {formatDate(m.Timestamp)}</span>{!inbound && <MessageStatusTicks status={m["Delivery Status"]} />}</small></div></div> }) : <div className="emptyState">No logged messages for this conversation.</div>}</div>
           <section className="inboxDraftPanel" aria-label="Purchase follow-up status">
             <div className="inboxDraftHeader"><strong>Purchase follow-ups</strong><span>Automatic tracking · Draft only</span></div>
