@@ -25,8 +25,8 @@ export function toCrmOrder(row: Record<string, unknown>): SheetRecord {
     "WooCommerce Status": txt(row.woocommerce_status, read("WooCommerce Status")),
     "WhatsApp Status": txt(row.whatsapp_status, read("WhatsApp Status")),
     "Delivery Status": txt(row.delivery_status, read("Delivery Status")),
-    "Confirmation Sent": read("Confirmation Sent"),
-    "Confirmation Received": read("Confirmation Received"),
+    "Confirmation Sent": row.confirmation_sent === true ? "Yes" : row.confirmation_sent === false ? "No" : read("Confirmation Sent"),
+    "Confirmation Received": row.confirmation_received === true ? "Yes" : row.confirmation_received === false ? "No" : read("Confirmation Received"),
     "Reminders Sent": typeof row.reminders_sent === "number" ? row.reminders_sent : 0,
   };
 }
@@ -39,7 +39,7 @@ export async function fetchDirectWooOrders(): Promise<SheetRecord[]> {
   const rows = await sql`
     SELECT order_id, customer_phone, customer_name, customer_city,
            created_at_source, grand_total, woocommerce_status,
-           whatsapp_status, delivery_status, reminders_sent, source_record
+           whatsapp_status, delivery_status, confirmation_sent, confirmation_received, reminders_sent, source_record
     FROM public.orders
     WHERE source_record->>'woocommerce_direct' = 'true'
     ORDER BY created_at_source DESC NULLS LAST, order_id DESC
@@ -74,6 +74,13 @@ export function mergeDirectWooOrders(existing: SheetRecord[], direct: SheetRecor
                        "Confirmation Sent", "Confirmation Received", "Reminders Sent"]) {
       const current = prior[key];
       if (current === undefined || current === null || current === "") merged[key] = row[key] ?? "";
+    }
+    // Direct Woo/Neon is authoritative for whether the customer was asked or actually confirmed.
+    // Keep these two separate: a read template is not customer consent.
+    for (const key of ["Confirmation Sent", "Confirmation Received"]) {
+      if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== "") {
+        merged[key] = row[key];
+      }
     }
     byId.set(id, merged);
   }
