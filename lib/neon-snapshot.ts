@@ -68,6 +68,7 @@ export async function getNeonManualRetryMessages(): Promise<SheetRecord[]> {
   const rows = await sql`
     SELECT m.legacy_message_id, m.whatsapp_wamid, m.conversation_id,
            m.customer_phone, m.customer_name, m.order_id, m.message_text,
+           m.message_kind, m.source_record,
            m.occurred_at,
            COALESCE(last_status.delivery_status, m.delivery_status) AS current_status
     FROM public.messages m
@@ -78,7 +79,11 @@ export async function getNeonManualRetryMessages(): Promise<SheetRecord[]> {
       ORDER BY d.status_at DESC, d.received_at DESC
       LIMIT 1
     ) last_status ON true
-    WHERE m.source_record ->> 'source' = 'n8n_one_time_template_retry'
+    WHERE (
+       m.source_record ->> 'source' = 'n8n_one_time_template_retry'
+       OR m.source_record ->> 'source' = 'manual_n8n_outbound'
+       OR m.source_record ->> 'Recovered From' LIKE 'n8n_execution_%'
+      )
       AND m.direction = 'outbound'
       AND NULLIF(BTRIM(m.whatsapp_wamid), '') IS NOT NULL
       AND NULLIF(BTRIM(m.message_text), '') IS NOT NULL
@@ -98,7 +103,7 @@ export async function getNeonManualRetryMessages(): Promise<SheetRecord[]> {
       "Order ID": String(row.order_id || ""),
       "Timestamp": new Date(String(row.occurred_at)).toISOString(),
       "Direction": "Outbound (Bot)",
-      "Message Type": "Template (HSM)",
+      "Message Type": String((row.source_record as Record<string, unknown> | null)?.["Message Type"] || (row.message_kind === "template" ? "Template (HSM)" : "Text Message")),
       "Message Content Snippet": String(row.message_text || ""),
       // Preserve the real WhatsApp callback status. "sent" is not "delivered".
       "Delivery Status": String(row.current_status || "unknown").toLowerCase(),
