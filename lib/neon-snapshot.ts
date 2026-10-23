@@ -27,7 +27,7 @@ export async function getNeonRawSnapshot(): Promise<Record<string, unknown>> {
 
   const sql = neon(url);
   const [orders, conversations, messages, events, health, outbox, stats] = await Promise.all([
-    sql`SELECT order_id, customer_phone, customer_name, customer_city, created_at_source, grand_total, woocommerce_status, whatsapp_status, delivery_status, reminders_sent, source_record FROM public.orders ORDER BY created_at_source NULLS LAST, order_id`,
+    sql`SELECT order_id, customer_phone, customer_name, customer_city, created_at_source, grand_total, woocommerce_status, whatsapp_status, delivery_status, confirmation_sent, confirmation_received, reminders_sent, source_record FROM public.orders ORDER BY created_at_source NULLS LAST, order_id`,
     sql`SELECT source_record FROM public.conversations ORDER BY started_at NULLS LAST, conversation_id`,
     sql`SELECT m.source_record FROM public.messages m WHERE NOT (m.conversation_id IS NULL AND (m.customer_phone IS NULL OR m.customer_phone='UNKNOWN' OR btrim(m.customer_phone)='') AND NULLIF(btrim(COALESCE(m.message_text,'')),'') IS NULL AND NULLIF(btrim(COALESCE(m.caption,'')),'') IS NULL AND NULLIF(btrim(COALESCE(m.source_record->>'Message Content Snippet','')),'') IS NULL AND NULLIF(btrim(COALESCE(m.source_record->>'Message Type','')),'') IS NULL AND NULLIF(btrim(COALESCE(m.source_record->>'Direction','')),'') IS NULL AND NULLIF(btrim(COALESCE(m.source_record->>'Message ID','')),'') IS NULL AND NULLIF(btrim(COALESCE(m.whatsapp_wamid,'')),'') IS NOT NULL AND LOWER(btrim(m.delivery_status)) IN ('read','delivered','failed','sent')) ORDER BY m.occurred_at, m.id`,
     sql`SELECT source_record FROM public.confirmation_events ORDER BY occurred_at NULLS LAST, event_id`,
